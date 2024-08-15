@@ -1,7 +1,8 @@
 import ChainList from '@/components/ChainList'
 import RPCTool from '@/components/RPCTool'
 import Sidebar from '@/components/Sidebar'
-import { ListIcon, ZapIcon } from 'lucide-react'
+import WalletManagement from '@/components/WalletManagement'
+import { ListIcon, WalletIcon, ZapIcon } from 'lucide-react'
 import { useState } from 'react'
 import { Toaster } from 'sonner'
 import './App.css'
@@ -9,12 +10,12 @@ import './App.css'
 const sidebarItems = [
   { id: 'rpcTool', label: 'RPC Tool', icon: ZapIcon },
   { id: 'chainList', label: 'Chain List', icon: ListIcon },
+  { id: 'walletManagement', label: 'Wallet Management', icon: WalletIcon },
   // Add more items here as you develop other features
 ]
 
 function App() {
   const [activeTab, setActiveTab] = useState('rpcTool')
-  const [currentMethod, setCurrentMethod] = useState('eth_blockNumber')
 
   return (
     <div className="flex h-screen bg-background">
@@ -26,13 +27,9 @@ function App() {
 
       {/* Main content */}
       <div className="flex-1 p-8 overflow-auto">
-        {activeTab === 'rpcTool' && (
-          <RPCTool
-            currentMethod={currentMethod}
-            setCurrentMethod={setCurrentMethod}
-          />
-        )}
-        {activeTab === 'chainList' && <ChainList currentMethod={currentMethod} />}
+        {activeTab === 'rpcTool' && <RPCTool />}
+        {activeTab === 'chainList' && <ChainList />}
+        {activeTab === 'walletManagement' && <WalletManagement />}
         {/* Add more components here as you develop other features */}
       </div>
       <Toaster />
