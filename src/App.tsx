@@ -1,53 +1,41 @@
-import { Button } from '@/components/ui/button'
-import { invoke } from '@tauri-apps/api/tauri'
+import ChainList from '@/components/ChainList'
+import RPCTool from '@/components/RPCTool'
+import Sidebar from '@/components/Sidebar'
+import { ListIcon, ZapIcon } from 'lucide-react'
 import { useState } from 'react'
+import { Toaster } from 'sonner'
 import './App.css'
-import reactLogo from './assets/react.svg'
+
+const sidebarItems = [
+  { id: 'rpcTool', label: 'RPC Tool', icon: ZapIcon },
+  { id: 'chainList', label: 'Chain List', icon: ListIcon },
+  // Add more items here as you develop other features
+]
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState('')
-  const [name, setName] = useState('')
-
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-    setGreetMsg(await invoke('greet', { name }))
-  }
+  const [activeTab, setActiveTab] = useState('rpcTool')
+  const [currentMethod, setCurrentMethod] = useState('eth_blockNumber')
 
   return (
-    <div className="container">
-      <h1 className="bg-red-500">Welcome to Tauri!</h1>
-      <Button>Click me</Button>
+    <div className="flex h-screen bg-background">
+      <Sidebar
+        items={sidebarItems}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+      />
 
-      <div className="row">
-        <a href="https://vitejs.dev" target="_blank" rel="noreferrer">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank" rel="noreferrer">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://reactjs.org" target="_blank" rel="noreferrer">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+      {/* Main content */}
+      <div className="flex-1 p-8 overflow-auto">
+        {activeTab === 'rpcTool' && (
+          <RPCTool
+            currentMethod={currentMethod}
+            setCurrentMethod={setCurrentMethod}
+          />
+        )}
+        {activeTab === 'chainList' && <ChainList currentMethod={currentMethod} />}
+        {/* Add more components here as you develop other features */}
       </div>
-
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault()
-          greet()
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-
-      <p>{greetMsg}</p>
+      <Toaster />
     </div>
   )
 }
