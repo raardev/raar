@@ -1,7 +1,20 @@
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
-import { saveAs } from 'file-saver'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { save } from '@tauri-apps/api/dialog'
+import { writeTextFile } from '@tauri-apps/api/fs'
+import { Trash2 } from 'lucide-react'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import {
   english,
   generateMnemonic,
@@ -17,7 +30,7 @@ import {
 
 interface Wallet {
   address: string
-  privateKey: string
+  privateKey?: string
   mnemonic?: string
   selected: boolean
 }
@@ -57,7 +70,6 @@ const WalletManagement: React.FC = () => {
         const account = mnemonicToAccount(mnemonic)
         newWallets.push({
           address: account.address,
-          privateKey: account.privateKey,
           mnemonic: mnemonic,
           selected: false,
         })
@@ -72,27 +84,50 @@ const WalletManagement: React.FC = () => {
       }
     }
     setWallets((prevWallets) => [...prevWallets, ...newWallets])
+    toast.success(`${batchSize} wallet(s) generated successfully`)
   }
 
-  const exportWallets = () => {
+  const deleteWallet = (index: number) => {
+    setWallets((prevWallets) => prevWallets.filter((_, i) => i !== index))
+    toast.success('Wallet deleted successfully')
+  }
+
+  const deleteSelectedWallets = () => {
+    setWallets((prevWallets) =>
+      prevWallets.filter((wallet) => !wallet.selected),
+    )
+    setSelectAll(false)
+    toast.success('Selected wallets deleted successfully')
+  }
+
+  const exportWallets = async () => {
     const selectedWallets = wallets.filter((w) => w.selected)
-    const headers =
-      generationMethod === 'mnemonic'
-        ? 'Address,Private Key,Mnemonic\n'
-        : 'Address,Private Key\n'
+    const headers = 'Address,Private Key,Mnemonic\n'
 
     const csvContent =
       headers +
       selectedWallets
-        .map((w) =>
-          generationMethod === 'mnemonic'
-            ? `${w.address},${w.privateKey},"${w.mnemonic}"`
-            : `${w.address},${w.privateKey}`,
-        )
+        .map((w) => `${w.address},${w.privateKey || ''},${w.mnemonic || ''}`)
         .join('\n')
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' })
-    saveAs(blob, 'wallets.csv')
+    try {
+      const filePath = await save({
+        filters: [
+          {
+            name: 'CSV',
+            extensions: ['csv'],
+          },
+        ],
+      })
+
+      if (filePath) {
+        await writeTextFile(filePath, csvContent)
+        toast.success('Wallets exported successfully')
+      }
+    } catch (error) {
+      console.error('Failed to export wallets:', error)
+      toast.error('Failed to export wallets')
+    }
   }
 
   const toggleWalletSelection = (index: number) => {
@@ -109,79 +144,140 @@ const WalletManagement: React.FC = () => {
   }
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-2xl font-bold mb-4">Wallet Management</h2>
-      <div className="flex space-x-2">
-        <Input
-          type="number"
-          min="1"
-          value={batchSize}
-          onChange={(e) => setBatchSize(Number(e.target.value))}
-          placeholder="Batch size"
-        />
-        <select
-          value={generationMethod}
-          onChange={(e) =>
-            setGenerationMethod(e.target.value as 'mnemonic' | 'privateKey')
-          }
-          className="border rounded px-2 py-1"
-        >
-          <option value="mnemonic">Mnemonic</option>
-          <option value="privateKey">Private Key</option>
-        </select>
-        {generationMethod === 'mnemonic' && (
-          <select
-            value={selectedWordlist}
-            onChange={(e) =>
-              setSelectedWordlist(e.target.value as keyof typeof wordlists)
-            }
-            className="border rounded px-2 py-1"
-          >
-            {Object.keys(wordlists).map((list) => (
-              <option key={list} value={list}>
-                {list}
-              </option>
-            ))}
-          </select>
-        )}
-        <Button onClick={generateWallets}>Generate Wallets</Button>
-        <Button
-          onClick={exportWallets}
-          disabled={wallets.filter((w) => w.selected).length === 0}
-        >
-          Export Selected Wallets
-        </Button>
-      </div>
-      <div className="mt-4">
-        <h3 className="text-lg font-semibold mb-2">Generated Wallets</h3>
-        <div className="space-y-2">
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              checked={selectAll}
-              onChange={toggleSelectAll}
-              className="mr-2"
-            />
-            Select All
-          </label>
-          {wallets.map((wallet, index) => (
-            <div key={index} className="bg-muted p-2 rounded flex items-center">
-              <input
-                type="checkbox"
-                checked={wallet.selected}
-                onChange={() => toggleWalletSelection(index)}
-                className="mr-2"
+    <Card className="w-full max-w-4xl mx-auto">
+      <CardHeader>
+        <CardTitle>Wallet Management</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Generate Wallets</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="batchSize">Batch Size</Label>
+              <Input
+                id="batchSize"
+                type="number"
+                min="1"
+                value={batchSize}
+                onChange={(e) => setBatchSize(Number(e.target.value))}
               />
-              <div>
-                <p>Address: {wallet.address}</p>
-                <p>Private Key: {wallet.privateKey}</p>
-                {wallet.mnemonic && <p>Mnemonic: {wallet.mnemonic}</p>}
-              </div>
             </div>
-          ))}
+            <div>
+              <Label htmlFor="generationMethod">Generation Method</Label>
+              <Select
+                value={generationMethod}
+                onValueChange={(value) =>
+                  setGenerationMethod(value as 'mnemonic' | 'privateKey')
+                }
+              >
+                <SelectTrigger id="generationMethod">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="mnemonic">Mnemonic</SelectItem>
+                  <SelectItem value="privateKey">Private Key</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {generationMethod === 'mnemonic' && (
+            <div>
+              <Label htmlFor="wordlist">Wordlist</Label>
+              <Select
+                value={selectedWordlist}
+                onValueChange={(value) =>
+                  setSelectedWordlist(value as keyof typeof wordlists)
+                }
+              >
+                <SelectTrigger id="wordlist">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.keys(wordlists).map((list) => (
+                    <SelectItem key={list} value={list}>
+                      {list}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <Button onClick={generateWallets} className="w-full">
+            Generate Wallets
+          </Button>
         </div>
-      </div>
-    </div>
+
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Manage Wallets</h3>
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="selectAll"
+                checked={selectAll}
+                onCheckedChange={toggleSelectAll}
+              />
+              <Label htmlFor="selectAll">Select All</Label>
+            </div>
+            <div className="space-x-2">
+              <Button
+                onClick={exportWallets}
+                disabled={wallets.filter((w) => w.selected).length === 0}
+              >
+                Export Selected
+              </Button>
+              <Button
+                onClick={deleteSelectedWallets}
+                disabled={wallets.filter((w) => w.selected).length === 0}
+                variant="destructive"
+              >
+                Delete Selected
+              </Button>
+            </div>
+          </div>
+
+          {wallets.length === 0 ? (
+            <p className="text-center text-muted-foreground">
+              No wallets generated yet. Use the form above to create some.
+            </p>
+          ) : (
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {wallets.map((wallet, index) => (
+                <Card key={index}>
+                  <CardContent className="p-4 flex items-start space-x-4">
+                    <Checkbox
+                      checked={wallet.selected}
+                      onCheckedChange={() => toggleWalletSelection(index)}
+                    />
+                    <div className="flex-grow">
+                      <p className="font-semibold">Address: {wallet.address}</p>
+                      {wallet.privateKey && (
+                        <p className="text-sm text-muted-foreground truncate">
+                          Private Key: {wallet.privateKey}
+                        </p>
+                      )}
+                      {wallet.mnemonic && (
+                        <p className="text-sm text-muted-foreground truncate">
+                          Mnemonic: {wallet.mnemonic}
+                        </p>
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => deleteWallet(index)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
