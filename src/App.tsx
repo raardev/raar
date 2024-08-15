@@ -1,5 +1,6 @@
 import BlockExplorer from '@/components/BlockExplorer'
 import ChainList from '@/components/ChainList'
+import DevnetTool from '@/components/DevnetTool'
 import EthereumUnitConverter from '@/components/EthereumUnitConverter'
 import RPCTool from '@/components/RPCTool'
 import Sidebar from '@/components/Sidebar'
@@ -8,6 +9,7 @@ import {
   CalculatorIcon,
   ListIcon,
   SearchIcon,
+  ServerIcon,
   WalletIcon,
   ZapIcon,
 } from 'lucide-react'
@@ -21,6 +23,7 @@ const sidebarItems = [
   { id: 'walletManagement', label: 'Wallet Management', icon: WalletIcon },
   { id: 'blockExplorer', label: 'Block Explorer', icon: SearchIcon },
   { id: 'ethUnitConverter', label: 'ETH Unit Converter', icon: CalculatorIcon },
+  { id: 'devnetTool', label: 'Devnet Tool', icon: ServerIcon },
   // Add more items here as you develop other features
 ]
 
@@ -42,6 +45,7 @@ function App() {
         {activeTab === 'walletManagement' && <WalletManagement />}
         {activeTab === 'blockExplorer' && <BlockExplorer />}
         {activeTab === 'ethUnitConverter' && <EthereumUnitConverter />}
+        {activeTab === 'devnetTool' && <DevnetTool />}
         {/* Add more components here as you develop other features */}
       </div>
       <Toaster />
