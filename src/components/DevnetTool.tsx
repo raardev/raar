@@ -30,6 +30,11 @@ const DevnetTool: React.FC = () => {
       setIsRunning(true)
     } catch (error) {
       console.error('Failed to start devnet:', error)
+      // If Anvil started but logs are not available, we still consider it running
+      if (error.includes('Unable to capture Anvil stdout')) {
+        setIsRunning(true)
+        setLogs(['Devnet started, but logs are not available.'])
+      }
     }
   }
 
