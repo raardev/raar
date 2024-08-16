@@ -3,6 +3,7 @@ import ChainList from '@/components/ChainList'
 import ContractInteraction from '@/components/ContractInteraction'
 import DevnetTool from '@/components/DevnetTool'
 import EthereumUnitConverter from '@/components/EthereumUnitConverter'
+import FourBytes from '@/components/FourBytes'
 import RPCTool from '@/components/RPCTool'
 import Sidebar from '@/components/Sidebar'
 import WalletManagement from '@/components/WalletManagement'
@@ -12,6 +13,7 @@ import { ConnectKitProvider, getDefaultConfig } from 'connectkit'
 import {
   CalculatorIcon,
   FileTextIcon,
+  HashIcon,
   ListIcon,
   SearchIcon,
   ServerIcon,
@@ -54,6 +56,7 @@ const sidebarItems = [
     label: 'Contract Interaction',
     icon: FileTextIcon,
   },
+  { id: 'fourBytes', label: '4bytes Tool', icon: HashIcon },
 ]
 
 const queryClient = new QueryClient()
@@ -80,6 +83,7 @@ function App() {
               {activeTab === 'ethUnitConverter' && <EthereumUnitConverter />}
               {activeTab === 'devnetTool' && <DevnetTool />}
               {activeTab === 'contractInteraction' && <ContractInteraction />}
+              {activeTab === 'fourBytes' && <FourBytes />}
             </div>
             <Toaster />
           </div>
