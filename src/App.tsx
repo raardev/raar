@@ -1,12 +1,17 @@
 import BlockExplorer from '@/components/BlockExplorer'
 import ChainList from '@/components/ChainList'
+import ContractInteraction from '@/components/ContractInteraction'
 import DevnetTool from '@/components/DevnetTool'
 import EthereumUnitConverter from '@/components/EthereumUnitConverter'
 import RPCTool from '@/components/RPCTool'
 import Sidebar from '@/components/Sidebar'
 import WalletManagement from '@/components/WalletManagement'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ConnectKitProvider, getDefaultConfig } from 'connectkit'
+
 import {
   CalculatorIcon,
+  FileTextIcon,
   ListIcon,
   SearchIcon,
   ServerIcon,
@@ -15,7 +20,27 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { Toaster } from 'sonner'
+import { mainnet } from 'viem/chains'
+import { WagmiProvider, createConfig } from 'wagmi'
 import './App.css'
+
+const config = createConfig(
+  getDefaultConfig({
+    // Your dApps chains
+    chains: [mainnet],
+
+    // Required API Keys
+    walletConnectProjectId: '927b0f2c5d6fdad04dac586d85e10cee', // raybit.dev
+
+    // Required App Info
+    appName: 'RayBit',
+
+    // Optional App Info
+    appDescription: 'Your App Description',
+    appUrl: 'https://raybit.dev',
+    appIcon: 'https://raybit.dev/logo.png', // your app's icon, no bigger than 1024x1024px (max. 1MB)
+  }),
+)
 
 const sidebarItems = [
   { id: 'rpcTool', label: 'RPC Tool', icon: ZapIcon },
@@ -24,32 +49,43 @@ const sidebarItems = [
   { id: 'blockExplorer', label: 'Block Explorer', icon: SearchIcon },
   { id: 'ethUnitConverter', label: 'ETH Unit Converter', icon: CalculatorIcon },
   { id: 'devnetTool', label: 'Devnet Tool', icon: ServerIcon },
-  // Add more items here as you develop other features
+  {
+    id: 'contractInteraction',
+    label: 'Contract Interaction',
+    icon: FileTextIcon,
+  },
 ]
+
+const queryClient = new QueryClient()
 
 function App() {
   const [activeTab, setActiveTab] = useState('rpcTool')
 
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar
-        items={sidebarItems}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-      />
+    <WagmiProvider config={config}>
+      <QueryClientProvider client={queryClient}>
+        <ConnectKitProvider>
+          <div className="flex h-screen bg-background">
+            <Sidebar
+              items={sidebarItems}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+            />
 
-      {/* Main content */}
-      <div className="flex-1 p-8 overflow-auto">
-        {activeTab === 'rpcTool' && <RPCTool />}
-        {activeTab === 'chainList' && <ChainList />}
-        {activeTab === 'walletManagement' && <WalletManagement />}
-        {activeTab === 'blockExplorer' && <BlockExplorer />}
-        {activeTab === 'ethUnitConverter' && <EthereumUnitConverter />}
-        {activeTab === 'devnetTool' && <DevnetTool />}
-        {/* Add more components here as you develop other features */}
-      </div>
-      <Toaster />
-    </div>
+            <div className="flex-1 p-8 overflow-auto">
+              {activeTab === 'rpcTool' && <RPCTool />}
+              {activeTab === 'chainList' && <ChainList />}
+              {activeTab === 'walletManagement' && <WalletManagement />}
+              {activeTab === 'blockExplorer' && <BlockExplorer />}
+              {activeTab === 'ethUnitConverter' && <EthereumUnitConverter />}
+              {activeTab === 'devnetTool' && <DevnetTool />}
+              {activeTab === 'contractInteraction' && <ContractInteraction />}
+            </div>
+            <Toaster />
+          </div>
+        </ConnectKitProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
   )
 }
 
