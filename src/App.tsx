@@ -5,6 +5,7 @@ import ContractMap from '@/components/ContractMap'
 import DevnetTool from '@/components/DevnetTool'
 import EthereumUnitConverter from '@/components/EthereumUnitConverter'
 import FourBytes from '@/components/FourBytes'
+import MultiChainGasTracker from '@/components/MultiChainGasTracker'
 import RPCTool from '@/components/RPCTool'
 import Sidebar from '@/components/Sidebar'
 import WalletManagement from '@/components/WalletManagement'
@@ -14,6 +15,7 @@ import { ConnectKitProvider, getDefaultConfig } from 'connectkit'
 import {
   CalculatorIcon,
   FileTextIcon,
+  GaugeIcon,
   GitBranchIcon,
   HashIcon,
   ListIcon,
@@ -60,6 +62,7 @@ const sidebarItems = [
   },
   { id: 'fourBytes', label: '4bytes Tool', icon: HashIcon },
   { id: 'contractMap', label: 'Contract Map', icon: GitBranchIcon },
+  { id: 'multiChainGasTracker', label: 'Gas Tracker', icon: GaugeIcon },
 ]
 
 const queryClient = new QueryClient()
@@ -88,6 +91,7 @@ function App() {
               {activeTab === 'contractInteraction' && <ContractInteraction />}
               {activeTab === 'fourBytes' && <FourBytes />}
               {activeTab === 'contractMap' && <ContractMap />}
+              {activeTab === 'multiChainGasTracker' && <MultiChainGasTracker />}
             </div>
             <Toaster />
           </div>
