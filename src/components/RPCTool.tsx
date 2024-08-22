@@ -410,7 +410,7 @@ const RPCTool: React.FC<{ style?: React.CSSProperties }> = ({ style }) => {
                       null,
                       2,
                     )}
-                    height="200px"
+                    height="400px"
                     extensions={[json()]}
                     editable={false}
                     className="border border-input rounded-md"
