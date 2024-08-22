@@ -413,7 +413,6 @@ export const chains: Chain[] = [
       'https://endpoints.omniatech.io/v1/gnosis/mainnet/public',
       'https://gnosis-rpc.publicnode.com',
       'https://1rpc.io/gnosis',
-      'https://gno-mainnet.gateway.tatum.io',
     ],
   },
   {
@@ -478,7 +477,7 @@ export const chains: Chain[] = [
     ],
   },
   {
-    name: 'RSK',
+    name: 'Rootstock',
     chainId: 30,
     rpc: [
       'https://mycrypto.rsk.co',
@@ -500,7 +499,7 @@ export const chains: Chain[] = [
     ],
   },
   {
-    name: 'OKC',
+    name: 'OKTC',
     chainId: 66,
     rpc: [
       'https://exchainrpc.okex.org',
@@ -524,20 +523,12 @@ export const chains: Chain[] = [
   {
     name: 'KCC',
     chainId: 321,
-    rpc: [
-      'https://rpc-mainnet.kcc.network',
-      'https://kcc.mytokenpocket.vip',
-      'https://kcc-rpc.com',
-      'https://services.tokenview.io/vipapi/nodeservice/kcs?apikey=qVHq2o6jpaakcw3lRstl',
-    ],
+    rpc: ['https://rpc-mainnet.kcc.network', 'https://kcc-rpc.com'],
   },
   {
     name: 'Velas',
     chainId: 106,
-    rpc: [
-      'https://evmexplorer.velas.com/rpc',
-      'https://velas-mainnet.rpcfast.com?api_key=xbhWBI1Wkguk8SNMu1bvvLurPGLXmgwYeC4S6g2H7WdwFigZSmPWVZRxrskEQwIf',
-    ],
+    rpc: ['https://evmexplorer.velas.com/rpc'],
   },
   {
     name: 'smartBCH',
@@ -546,7 +537,6 @@ export const chains: Chain[] = [
       'https://smartbch.fountainhead.cash/mainnet',
       'https://global.uat.cash',
       'https://rpc.uatvo.com',
-      'https://bch-mainnet.gateway.tatum.io',
     ],
   },
   {
@@ -652,7 +642,6 @@ export const chains: Chain[] = [
       'https://rpc.syscoin.org',
       'https://rpc.ankr.com/syscoin',
       'https://syscoin-evm.publicnode.com',
-      'https://rpc.pollum.services',
     ],
   },
   {
@@ -671,18 +660,14 @@ export const chains: Chain[] = [
     rpc: [
       'https://palm-mainnet.infura.io/v3/3a961d6501e54add9a41aa53f15de99b',
       'https://palm-mainnet.public.blastapi.io',
-      'https://palm-mainnet.gateway.tatum.io',
     ],
   },
   {
     name: 'Holesky',
     chainId: 17000,
     rpc: [
-      'https://endpoints.omniatech.io/v1/eth/holesky/public',
       'https://ethereum-holesky.blockpi.network/v1/rpc/public',
       'https://ethereum-holesky-rpc.publicnode.com',
-      'https://1rpc.io/holesky',
-      'https://holesky-rpc.nocturnode.tech',
     ],
   },
   {
@@ -702,7 +687,6 @@ export const chains: Chain[] = [
       'https://earpc.xinfin.network/',
       'https://erpc.xinfin.network/',
       'https://rpc.ankr.com/xdc',
-      'https://xdc-mainnet.gateway.tatum.io',
     ],
   },
   {
@@ -781,7 +765,6 @@ export const chains: Chain[] = [
       'https://rpc.pulsechain.com',
       'https://pulsechain-rpc.publicnode.com',
       'https://rpc-pulsechain.g4mm4.io',
-      'https://evex.cloud/pulserpc',
     ],
   },
   {
@@ -835,7 +818,7 @@ export const chains: Chain[] = [
     ],
   },
   {
-    name: 'zkSync Era Sepolia Testnet',
+    name: 'ZKsync Era Sepolia Testnet',
     chainId: 300,
     rpc: [
       'https://zksync-era-sepolia.blockpi.network/v1/rpc/public',
@@ -843,19 +826,18 @@ export const chains: Chain[] = [
     ],
   },
   {
-    name: 'zkSync Era',
+    name: 'ZKsync Era',
     chainId: 324,
     rpc: [
       'https://zksync-era.blockpi.network/v1/rpc/public',
       'https://go.getblock.io/f76c09905def4618a34946bf71851542',
       'https://zksync.meowrpc.com',
       'https://zksync.drpc.org',
-      'https://1rpc.io/zksync2-era',
       'https://endpoints.omniatech.io/v1/zksync-era/mainnet/public',
     ],
   },
   {
-    name: 'OKX X1 Mainnet',
+    name: 'X Layer',
     chainId: 196,
     rpc: [
       'https://rpc.xlayer.tech',
@@ -864,7 +846,7 @@ export const chains: Chain[] = [
     ],
   },
   {
-    name: 'OKX X1 Testnet',
+    name: 'X Layer Testnet',
     chainId: 195,
     rpc: ['https://endpoints.omniatech.io/v1/xlayer/testnet/public'],
   },
@@ -916,9 +898,6 @@ export const chains: Chain[] = [
       'https://rpc01-sg.dogechain.dog',
       'https://rpc02-sg.dogechain.dog',
       'https://rpc03-sg.dogechain.dog',
-      'https://dogechain.ankr.com',
-      'https://dogechain-sj.ankr.com',
-      'https://doge-mainnet.gateway.tatum.io',
     ],
   },
   {
@@ -1047,7 +1026,6 @@ export const chains: Chain[] = [
       'https://endpoints.omniatech.io/v1/base/mainnet/public',
       'https://base.api.onfinality.io/public',
       'https://public.stackup.sh/api/v1/node/base-mainnet',
-      'https://base-mainnet.gateway.tatum.io',
       'https://base.rpc.subquery.network/public',
     ],
   },
@@ -1057,7 +1035,6 @@ export const chains: Chain[] = [
     rpc: [
       'https://haqq-evm.publicnode.com',
       'https://evm.haqq.sh',
-      'https://haqq-mainnet.gateway.tatum.io',
       'https://haqq.drpc.org',
     ],
   },
@@ -1294,7 +1271,7 @@ export const chains: Chain[] = [
     ],
   },
   {
-    name: 'Markr Go',
+    name: 'Markr',
     chainId: 431140,
     rpc: ['https://rpc.markr.io/ext/'],
   },
@@ -1313,7 +1290,7 @@ export const chains: Chain[] = [
     rpc: ['https://rpc.jfinchain.com'],
   },
   {
-    name: 'J2O Trifecta',
+    name: 'J2O',
     chainId: 35011,
     rpc: ['https://rpc.j2o.io'],
   },
@@ -1325,15 +1302,9 @@ export const chains: Chain[] = [
       'https://taiko.blockpi.network/v1/rpc/public',
       'https://rpc.taiko.tools',
       'https://rpc.ankr.com/taiko',
-      'https://taiko-mainnet.4everland.org/v1/37fa9972c1b1cd5fab542c7bdd4cde2f',
       'https://taiko.drpc.org',
       'https://taiko-mainnet.rpc.porters.xyz/taiko-public',
     ],
-  },
-  {
-    name: 'Taiko Katla L2',
-    chainId: 167008,
-    rpc: ['https://katla.taiko.tools'],
   },
   {
     name: 'Taiko Hekla L2',
@@ -1342,7 +1313,6 @@ export const chains: Chain[] = [
       'https://taiko-hekla.blockpi.network/v1/rpc/public',
       'https://hekla.taiko.tools',
       'https://rpc.ankr.com/taiko_hekla',
-      'https://taiko-hekla.4everland.org/v1/37fa9972c1b1cd5fab542c7bdd4cde2f',
       'https://taiko-hekla.drpc.org',
     ],
   },
@@ -1383,16 +1353,6 @@ export const chains: Chain[] = [
     name: 'Rollux Testnet',
     chainId: 57000,
     rpc: ['https://rollux.rpc-testnet.pollum.services'],
-  },
-  {
-    name: 'Shardeum Sphinx 1.X',
-    chainId: 8081,
-    rpc: ['https://dapps.shardeum.org/'],
-  },
-  {
-    name: 'Shardeum Sphinx 2.X',
-    chainId: 8082,
-    rpc: ['https://sphinx.shardeum.org/'],
   },
   {
     name: 'Arden Chain Mainnet',
@@ -1475,7 +1435,7 @@ export const chains: Chain[] = [
     ],
   },
   {
-    name: 'MXC zkEVM Mainnet',
+    name: 'Moonchain',
     chainId: 18686,
     rpc: ['https://rpc.mxc.com'],
   },
