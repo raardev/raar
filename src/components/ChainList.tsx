@@ -13,15 +13,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { type Chain, chains } from '@/config/chains'
+import { ChevronDown, ChevronUp, Pause, Play } from 'lucide-react'
 import type React from 'react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Toaster, toast } from 'sonner'
-
-interface Chain {
-  name: string
-  chainId: number
-  rpc: string[]
-}
 
 interface RPCStatus {
   url: string
@@ -29,97 +25,146 @@ interface RPCStatus {
   latency?: number
 }
 
-const chains: Chain[] = [
-  {
-    name: 'Ethereum Mainnet',
-    chainId: 1,
-    rpc: [
-      'https://mainnet.infura.io/v3/YOUR-PROJECT-ID',
-      'https://rpc.ankr.com/eth',
-    ],
-  },
-  {
-    name: 'Binance Smart Chain',
-    chainId: 56,
-    rpc: [
-      'https://bsc-dataseed.binance.org/',
-      'https://bsc-dataseed1.defibit.io/',
-    ],
-  },
-  // Add more chains here
-]
+const CHECK_INTERVAL = 10000 // 10 seconds
 
-const CHECK_INTERVAL = 60000 // 1 minute
+interface FetchingControlProps {
+  chainId: number
+  checkChainRPCs: (chainId: number) => void
+}
 
-const ChainList: React.FC = () => {
-  const [searchTerm, setSearchTerm] = useState('')
-  const [filteredChains, setFilteredChains] = useState<Chain[]>(chains)
-  const [rpcStatuses, setRpcStatuses] = useState<{ [key: string]: RPCStatus }>(
-    {},
-  )
+const FetchingControl: React.FC<FetchingControlProps> = ({
+  chainId,
+  checkChainRPCs,
+}) => {
+  const [isFetching, setIsFetching] = useState(true)
   const [nextCheckIn, setNextCheckIn] = useState(CHECK_INTERVAL / 1000)
 
   useEffect(() => {
-    const filtered = chains.filter(
-      (chain) =>
-        chain.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        chain.chainId.toString().includes(searchTerm),
-    )
-    setFilteredChains(filtered)
-  }, [searchTerm])
+    let intervalId: NodeJS.Timeout | null = null
+    if (isFetching) {
+      checkChainRPCs(chainId)
+      intervalId = setInterval(() => {
+        checkChainRPCs(chainId)
+        setNextCheckIn(CHECK_INTERVAL / 1000)
+      }, CHECK_INTERVAL)
 
-  useEffect(() => {
-    const checkAllRPCs = async () => {
-      const newStatuses: { [key: string]: RPCStatus } = {}
-      for (const chain of chains) {
-        for (const rpc of chain.rpc) {
-          newStatuses[rpc] = { url: rpc, status: 'checking' }
-          setRpcStatuses((prev) => ({ ...prev, [rpc]: newStatuses[rpc] }))
+      const countdownInterval = setInterval(() => {
+        setNextCheckIn((prev) => (prev > 0 ? prev - 1 : CHECK_INTERVAL / 1000))
+      }, 1000)
 
-          try {
-            const startTime = Date.now()
-            const response = await fetch(rpc, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                jsonrpc: '2.0',
-                method: 'eth_blockNumber',
-                params: [],
-                id: 1,
-              }),
-            })
-            const endTime = Date.now()
-            const data = await response.json()
-            if (data.result) {
-              newStatuses[rpc] = {
-                url: rpc,
-                status: 'healthy',
-                latency: endTime - startTime,
-              }
-            } else {
-              newStatuses[rpc] = { url: rpc, status: 'unhealthy' }
-            }
-          } catch (error) {
-            newStatuses[rpc] = { url: rpc, status: 'unhealthy' }
-          }
-          setRpcStatuses((prev) => ({ ...prev, [rpc]: newStatuses[rpc] }))
-        }
+      return () => {
+        if (intervalId) clearInterval(intervalId)
+        clearInterval(countdownInterval)
       }
-      setNextCheckIn(CHECK_INTERVAL / 1000)
     }
+  }, [chainId, isFetching, checkChainRPCs])
 
-    checkAllRPCs()
-    const interval = setInterval(checkAllRPCs, CHECK_INTERVAL)
+  const toggleFetching = () => {
+    setIsFetching((prev) => !prev)
+  }
 
-    const ticker = setInterval(() => {
-      setNextCheckIn((prev) => (prev > 0 ? prev - 1 : CHECK_INTERVAL / 1000))
-    }, 1000)
+  return (
+    <button
+      type="button"
+      onClick={toggleFetching}
+      className="relative w-6 h-6 focus:outline-none"
+      aria-label={isFetching ? 'Pause' : 'Start'}
+    >
+      <svg className="w-full h-full" viewBox="0 0 24 24">
+        <circle
+          className="text-muted-foreground/20"
+          strokeWidth="2"
+          stroke="currentColor"
+          fill="transparent"
+          r="10"
+          cx="12"
+          cy="12"
+        />
+        <circle
+          className="text-primary"
+          strokeWidth="2"
+          strokeDasharray="63"
+          strokeDashoffset={63 * (nextCheckIn / (CHECK_INTERVAL / 1000))}
+          strokeLinecap="round"
+          stroke="currentColor"
+          fill="transparent"
+          r="10"
+          cx="12"
+          cy="12"
+        />
+      </svg>
+      {isFetching ? (
+        <Pause className="w-3 h-3 text-primary absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+      ) : (
+        <Play className="w-3 h-3 text-primary absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+      )}
+    </button>
+  )
+}
 
-    return () => {
-      clearInterval(interval)
-      clearInterval(ticker)
+const ChainList: React.FC = () => {
+  const [searchTerm, setSearchTerm] = useState('')
+  const [rpcStatuses, setRpcStatuses] = useState<{ [key: string]: RPCStatus }>(
+    {},
+  )
+  const [expandedChains, setExpandedChains] = useState<Set<number>>(new Set())
+
+  const checkRPCHealth = useCallback(async (rpc: string) => {
+    try {
+      const startTime = Date.now()
+      const response = await fetch(rpc, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          method: 'eth_blockNumber',
+          params: [],
+          id: 1,
+        }),
+      })
+      const endTime = Date.now()
+      const data = await response.json()
+      if (data.result) {
+        return { status: 'healthy' as const, latency: endTime - startTime }
+      }
+    } catch (error) {
+      // Error handling
     }
+    return { status: 'unhealthy' as const }
   }, [])
+
+  const checkChainRPCs = useCallback(
+    (chainId: number) => {
+      const chain = chains.find((c) => c.chainId === chainId)
+      if (chain) {
+        chain.rpc.forEach(async (rpc) => {
+          const result = await checkRPCHealth(rpc)
+          setRpcStatuses((prev) => ({
+            ...prev,
+            [rpc]: { url: rpc, ...result },
+          }))
+        })
+      }
+    },
+    [chains, checkRPCHealth],
+  )
+
+  const toggleChainExpansion = useCallback(
+    (chainId: number) => {
+      setExpandedChains((prev) => {
+        const newSet = new Set(prev)
+        if (newSet.has(chainId)) {
+          newSet.delete(chainId)
+        } else {
+          newSet.add(chainId)
+          // Immediately check RPCs when expanding
+          checkChainRPCs(chainId)
+        }
+        return newSet
+      })
+    },
+    [checkChainRPCs],
+  )
 
   const getStatusCircle = (status: RPCStatus['status']) => {
     const baseClasses = 'inline-block w-3 h-3 rounded-full mr-2'
@@ -135,11 +180,9 @@ const ChainList: React.FC = () => {
 
   const sortRPCs = (rpcs: string[]) => {
     return rpcs.sort((a, b) => {
-      const statusA = rpcStatuses[a]?.status
-      const statusB = rpcStatuses[b]?.status
-      if (statusA === 'healthy' && statusB !== 'healthy') return -1
-      if (statusA !== 'healthy' && statusB === 'healthy') return 1
-      return 0
+      const latencyA = rpcStatuses[a]?.latency ?? Number.POSITIVE_INFINITY
+      const latencyB = rpcStatuses[b]?.latency ?? Number.POSITIVE_INFINITY
+      return latencyA - latencyB
     })
   }
 
@@ -151,51 +194,50 @@ const ChainList: React.FC = () => {
     })
   }
 
-  return (
-    <div className="space-y-4">
-      <h2 className="text-2xl font-bold mb-4">Chain List</h2>
-      <div className="flex justify-between items-center">
-        <Input
-          type="text"
-          placeholder="Search by chain name or ID"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
-        />
-        <div className="text-sm text-muted-foreground">
-          Next check in: {nextCheckIn}s
-        </div>
-      </div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Chain Name</TableHead>
-            <TableHead>Chain ID</TableHead>
-            <TableHead>RPC URLs</TableHead>
-            <TableHead>Latency</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filteredChains.map((chain) => (
-            <TableRow key={chain.chainId}>
-              <TableCell>{chain.name}</TableCell>
-              <TableCell>{chain.chainId}</TableCell>
-              <TableCell>
-                {sortRPCs(chain.rpc).map((rpc, index) => (
-                  <div
-                    key={index}
-                    className={`flex items-center space-x-2 ${
-                      rpcStatuses[rpc]?.status === 'unhealthy'
-                        ? 'text-muted-foreground'
-                        : ''
-                    }`}
-                  >
+  const renderRPCGroup = useCallback(
+    (chain: Chain) => {
+      const isExpanded = expandedChains.has(chain.chainId)
+      const totalRPCs = chain.rpc.length
+
+      return (
+        <div>
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => toggleChainExpansion(chain.chainId)}
+              className="flex items-center space-x-2 text-sm font-medium"
+            >
+              {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              <span>
+                {isExpanded
+                  ? `${chain.rpc.filter((rpc) => rpcStatuses[rpc]?.status === 'healthy').length}/${totalRPCs} RPCs healthy`
+                  : `${totalRPCs} RPCs`}
+              </span>
+            </button>
+            {isExpanded && (
+              <FetchingControl
+                chainId={chain.chainId}
+                checkChainRPCs={checkChainRPCs}
+              />
+            )}
+          </div>
+          {isExpanded && (
+            <div className="mt-2 space-y-2">
+              {sortRPCs(chain.rpc).map((rpc, index) => (
+                <div
+                  key={index}
+                  className={`flex items-center justify-between ${
+                    rpcStatuses[rpc]?.status === 'unhealthy'
+                      ? 'text-muted-foreground'
+                      : ''
+                  }`}
+                >
+                  <div className="flex items-center space-x-2">
                     {getStatusCircle(rpcStatuses[rpc]?.status || 'checking')}
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <span
-                            className="cursor-pointer hover:underline"
+                            className="cursor-pointer hover:underline truncate max-w-xs"
                             onClick={() => handleCopy(rpc)}
                           >
                             {rpc}
@@ -207,21 +249,63 @@ const ChainList: React.FC = () => {
                       </Tooltip>
                     </TooltipProvider>
                   </div>
-                ))}
-              </TableCell>
-              <TableCell>
-                {sortRPCs(chain.rpc).map((rpc, index) => (
-                  <div key={index}>
+                  <span className="text-sm">
                     {rpcStatuses[rpc]?.latency
                       ? `${rpcStatuses[rpc].latency}ms`
                       : '-'}
-                  </div>
-                ))}
-              </TableCell>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )
+    },
+    [expandedChains, rpcStatuses, toggleChainExpansion, checkChainRPCs],
+  )
+
+  const filteredChains = useMemo(() => {
+    return chains.filter(
+      (chain) =>
+        chain.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        chain.chainId.toString().includes(searchTerm),
+    )
+  }, [chains, searchTerm])
+
+  return (
+    <div className="container mx-auto space-y-4">
+      <h2 className="text-2xl font-bold mb-4">Chain List</h2>
+      <div className="flex justify-between items-center">
+        <Input
+          type="text"
+          placeholder="Search by chain name or ID"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="max-w-sm"
+        />
+      </div>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-16">#</TableHead>
+              <TableHead className="w-1/4">Chain Name</TableHead>
+              <TableHead className="w-1/4">Chain ID</TableHead>
+              <TableHead className="w-1/2">RPC URLs</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {filteredChains.map((chain, index) => (
+              <TableRow key={chain.chainId}>
+                <TableCell className="w-16">{index + 1}</TableCell>
+                <TableCell className="w-1/4">{chain.name}</TableCell>
+                <TableCell className="w-1/4">{chain.chainId}</TableCell>
+                <TableCell className="w-1/2">{renderRPCGroup(chain)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
       <Toaster />
     </div>
   )
