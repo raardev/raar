@@ -33,6 +33,9 @@
           "$DOCUMENT/*",
           "$DOWNLOAD/*"
         ]
+      },
+      "clipboard": {
+        "writeText": true
       }
     },
     "windows": [

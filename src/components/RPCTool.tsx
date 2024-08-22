@@ -1,4 +1,3 @@
-import JsonView from '@/components/JsonView'
 import { Button } from '@/components/ui/button'
 import {
   Command,
@@ -19,16 +18,31 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { json } from '@codemirror/lang-json'
+import { writeText } from '@tauri-apps/api/clipboard'
+import { save } from '@tauri-apps/api/dialog'
+import { writeTextFile } from '@tauri-apps/api/fs'
 import CodeMirror from '@uiw/react-codemirror'
-import { CheckIcon, ComputerIcon, FileJsonIcon, PlusIcon } from 'lucide-react'
+import {
+  CheckIcon,
+  ComputerIcon,
+  CopyIcon,
+  DownloadIcon,
+  FileJsonIcon,
+  PlusIcon,
+  RefreshCwIcon,
+} from 'lucide-react'
 import { useCallback, useState } from 'react'
+import { toast } from 'sonner'
 
 interface RPCRequest {
   id: string
   rpcUrl: string
   method: string
   params: string
-  response: unknown
+  response: {
+    status?: number
+    statusText?: string
+  }
   latency: number | null
 }
 
@@ -121,6 +135,9 @@ const RPCTool: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [openPopover, setOpenPopover] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [convertedResponse, setConvertedResponse] = useState<string | null>(
+    null,
+  )
 
   const handleAddTab = () => {
     const newId = (
@@ -153,6 +170,7 @@ const RPCTool: React.FC = () => {
 
     try {
       const startTime = Date.now()
+      const parsedParams = JSON.parse(request.params)
       const res = await fetch(request.rpcUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -160,7 +178,7 @@ const RPCTool: React.FC = () => {
           jsonrpc: '2.0',
           id: 1,
           method: request.method,
-          params: JSON.parse(request.params),
+          params: parsedParams.params,
         }),
       })
       const endTime = Date.now()
@@ -180,10 +198,7 @@ const RPCTool: React.FC = () => {
     (id: string, method: string) => {
       updateRequest(id, {
         method,
-        params:
-          method === 'custom'
-            ? defaultParams[method]
-            : JSON.stringify(JSON.parse(defaultParams[method]), null, 2),
+        params: defaultParams[method],
       })
       setOpenPopover(null)
       setSearchTerm('')
@@ -210,6 +225,61 @@ const RPCTool: React.FC = () => {
     } catch (_) {
       return false
     }
+  }
+
+  const getStatusColor = (status: number) => {
+    if (status >= 200 && status < 300) return 'text-green-500'
+    if (status >= 300 && status < 400) return 'text-yellow-500'
+    if (status >= 400) return 'text-red-500'
+    return 'text-gray-500'
+  }
+
+  const getLatencyColor = (latency: number) => {
+    if (latency < 100) return 'text-green-500'
+    if (latency < 300) return 'text-yellow-500'
+    return 'text-red-500'
+  }
+
+  const downloadJson = async (data: any) => {
+    try {
+      const jsonString = JSON.stringify(data, null, 2)
+      const filePath = await save({
+        filters: [{ name: 'JSON', extensions: ['json'] }],
+      })
+      if (filePath) {
+        await writeTextFile(filePath, jsonString)
+        toast.success('JSON file saved successfully')
+      }
+    } catch (error) {
+      console.error('Failed to save JSON file:', error)
+      toast.error('Failed to save JSON file')
+    }
+  }
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await writeText(text)
+      toast.success('Copied to clipboard')
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error)
+      toast.error('Failed to copy to clipboard')
+    }
+  }
+
+  const convertHexToNumber = (obj: any): any => {
+    if (typeof obj === 'string' && obj.startsWith('0x')) {
+      return Number.parseInt(obj, 16)
+    } else if (Array.isArray(obj)) {
+      return obj.map(convertHexToNumber)
+    } else if (typeof obj === 'object' && obj !== null) {
+      return Object.fromEntries(
+        Object.entries(obj).map(([key, value]) => [
+          key,
+          convertHexToNumber(value),
+        ]),
+      )
+    }
+    return obj
   }
 
   return (
@@ -330,15 +400,111 @@ const RPCTool: React.FC = () => {
                 </Popover>
               </div>
             </div>
-            {req.latency !== null && (
-              <div className="text-sm text-muted-foreground">
-                Latency: {req.latency}ms
-              </div>
-            )}
             {req.response && (
-              <div className="bg-muted p-4 rounded overflow-auto max-h-60">
-                <JsonView data={req.response} />
-              </div>
+              <>
+                <div className="flex items-center space-x-4 text-xs">
+                  <span>
+                    Status:{' '}
+                    <span
+                      className={`${getStatusColor(req.response.status || 200)} font-medium`}
+                    >
+                      {req.response.status || 200}
+                    </span>{' '}
+                    •{' '}
+                    <span
+                      className={`${getStatusColor(req.response.status || 200)} font-medium`}
+                    >
+                      {req.response.statusText || 'OK'}
+                    </span>
+                  </span>
+                  <span>
+                    Time:{' '}
+                    <span
+                      className={`${getLatencyColor(req.latency || 0)} font-medium`}
+                    >
+                      {req.latency || 0} ms
+                    </span>
+                  </span>
+                  <span>
+                    Size:{' '}
+                    <span className="text-purple-500 font-medium">
+                      {JSON.stringify(req.response).length} B
+                    </span>
+                  </span>
+                </div>
+                <div className="relative">
+                  <CodeMirror
+                    value={JSON.stringify(
+                      convertedResponse || req.response,
+                      null,
+                      2,
+                    )}
+                    height="200px"
+                    extensions={[json()]}
+                    editable={false}
+                    className="border border-input rounded-md"
+                  />
+                  <div className="absolute top-2 right-2 flex space-x-2 text-muted-foreground">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          onClick={() =>
+                            downloadJson(convertedResponse || req.response)
+                          }
+                          variant="ghost"
+                          size="icon"
+                          className="w-5 h-5 hover:bg-transparent"
+                        >
+                          <DownloadIcon className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Download JSON</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          onClick={() =>
+                            copyToClipboard(
+                              JSON.stringify(
+                                convertedResponse || req.response,
+                                null,
+                                2,
+                              ),
+                            )
+                          }
+                          variant="ghost"
+                          size="icon"
+                          className="w-5 h-5 hover:bg-transparent"
+                        >
+                          <CopyIcon className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Copy to Clipboard</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          onClick={() => {
+                            if (convertedResponse) {
+                              setConvertedResponse(null)
+                            } else {
+                              setConvertedResponse(
+                                convertHexToNumber(req.response),
+                              )
+                            }
+                          }}
+                          variant="ghost"
+                          size="icon"
+                          className="w-5 h-5 hover:bg-transparent"
+                        >
+                          <RefreshCwIcon className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Convert Hex to Number</TooltipContent>
+                    </Tooltip>
+                  </div>
+                </div>
+              </>
             )}
           </TabsContent>
         ))}
