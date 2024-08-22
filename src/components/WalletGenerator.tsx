@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -52,7 +52,7 @@ const wordlists = {
   traditionalChinese,
 }
 
-const WalletManagement: React.FC = () => {
+const WalletGenerator: React.FC = () => {
   const [wallets, setWallets] = useState<Wallet[]>([])
   const [batchSize, setBatchSize] = useState(1)
   const [generationMethod, setGenerationMethod] = useState<
@@ -144,13 +144,12 @@ const WalletManagement: React.FC = () => {
   }
 
   return (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader>
-        <CardTitle>Wallet Management</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
+    <div className="container mx-auto space-y-4">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Wallet Generator</h1>
+      </div>
+      <div className="space-y-6">
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Generate Wallets</h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="batchSize">Batch Size</Label>
@@ -180,7 +179,6 @@ const WalletManagement: React.FC = () => {
               </Select>
             </div>
           </div>
-
           {generationMethod === 'mnemonic' && (
             <div>
               <Label htmlFor="wordlist">Wordlist</Label>
@@ -203,7 +201,6 @@ const WalletManagement: React.FC = () => {
               </Select>
             </div>
           )}
-
           <Button onClick={generateWallets} className="w-full">
             Generate Wallets
           </Button>
@@ -225,14 +222,14 @@ const WalletManagement: React.FC = () => {
                 onClick={exportWallets}
                 disabled={wallets.filter((w) => w.selected).length === 0}
               >
-                Export Selected
+                Export
               </Button>
               <Button
                 onClick={deleteSelectedWallets}
                 disabled={wallets.filter((w) => w.selected).length === 0}
                 variant="destructive"
               >
-                Delete Selected
+                Delete
               </Button>
             </div>
           </div>
@@ -276,9 +273,9 @@ const WalletManagement: React.FC = () => {
             </div>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
 
-export default WalletManagement
+export default WalletGenerator

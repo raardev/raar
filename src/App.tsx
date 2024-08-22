@@ -8,7 +8,7 @@ import FourBytes from '@/components/FourBytes'
 import MultiChainGasTracker from '@/components/MultiChainGasTracker'
 import RPCTool from '@/components/RPCTool'
 import Sidebar from '@/components/Sidebar'
-import WalletManagement from '@/components/WalletManagement'
+import WalletGenerator from '@/components/WalletGenerator'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ConnectKitProvider, getDefaultConfig } from 'connectkit'
@@ -51,7 +51,7 @@ const config = createConfig(
 const sidebarItems = [
   { id: 'rpcTool', label: 'RPC Tool', icon: ZapIcon },
   { id: 'chainList', label: 'Chain List', icon: ListIcon },
-  { id: 'walletManagement', label: 'Wallet Management', icon: WalletIcon },
+  { id: 'walletGenerator', label: 'Wallet Generator', icon: WalletIcon },
   { id: 'blockExplorer', label: 'Block Explorer', icon: SearchIcon },
   { id: 'ethUnitConverter', label: 'ETH Unit Converter', icon: CalculatorIcon },
   { id: 'devnetTool', label: 'Devnet Tool', icon: ServerIcon },
@@ -95,7 +95,7 @@ function App() {
                   }}
                 />
                 {activeTab === 'chainList' && <ChainList />}
-                {activeTab === 'walletManagement' && <WalletManagement />}
+                {activeTab === 'walletGenerator' && <WalletGenerator />}
                 {activeTab === 'blockExplorer' && <BlockExplorer />}
                 {activeTab === 'ethUnitConverter' && <EthereumUnitConverter />}
                 {activeTab === 'devnetTool' && <DevnetTool />}
