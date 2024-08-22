@@ -9,6 +9,7 @@ import MultiChainGasTracker from '@/components/MultiChainGasTracker'
 import RPCTool from '@/components/RPCTool'
 import Sidebar from '@/components/Sidebar'
 import WalletManagement from '@/components/WalletManagement'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ConnectKitProvider, getDefaultConfig } from 'connectkit'
 
@@ -74,27 +75,31 @@ function App() {
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <ConnectKitProvider>
-          <div className="flex h-screen bg-background">
-            <Sidebar
-              items={sidebarItems}
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-            />
+          <TooltipProvider>
+            <div className="flex h-screen bg-background">
+              <Sidebar
+                items={sidebarItems}
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+              />
 
-            <div className="flex-1 p-8 overflow-auto">
-              {activeTab === 'rpcTool' && <RPCTool />}
-              {activeTab === 'chainList' && <ChainList />}
-              {activeTab === 'walletManagement' && <WalletManagement />}
-              {activeTab === 'blockExplorer' && <BlockExplorer />}
-              {activeTab === 'ethUnitConverter' && <EthereumUnitConverter />}
-              {activeTab === 'devnetTool' && <DevnetTool />}
-              {activeTab === 'contractInteraction' && <ContractInteraction />}
-              {activeTab === 'fourBytes' && <FourBytes />}
-              {activeTab === 'contractMap' && <ContractMap />}
-              {activeTab === 'multiChainGasTracker' && <MultiChainGasTracker />}
+              <div className="flex-1 p-4 overflow-auto">
+                {activeTab === 'rpcTool' && <RPCTool />}
+                {activeTab === 'chainList' && <ChainList />}
+                {activeTab === 'walletManagement' && <WalletManagement />}
+                {activeTab === 'blockExplorer' && <BlockExplorer />}
+                {activeTab === 'ethUnitConverter' && <EthereumUnitConverter />}
+                {activeTab === 'devnetTool' && <DevnetTool />}
+                {activeTab === 'contractInteraction' && <ContractInteraction />}
+                {activeTab === 'fourBytes' && <FourBytes />}
+                {activeTab === 'contractMap' && <ContractMap />}
+                {activeTab === 'multiChainGasTracker' && (
+                  <MultiChainGasTracker />
+                )}
+              </div>
+              <Toaster />
             </div>
-            <Toaster />
-          </div>
+          </TooltipProvider>
         </ConnectKitProvider>
       </QueryClientProvider>
     </WagmiProvider>

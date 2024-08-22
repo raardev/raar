@@ -1,26 +1,36 @@
 import JsonView from '@/components/JsonView'
 import { Button } from '@/components/ui/button'
+import {
+  Command,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
 import { Input } from '@/components/ui/input'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
-import type React from 'react'
-import { useEffect, useRef, useState } from 'react'
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
-  CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
-  ResponsiveContainer,
   Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { json } from '@codemirror/lang-json'
+import CodeMirror from '@uiw/react-codemirror'
+import { CheckIcon, ComputerIcon, FileJsonIcon, PlusIcon } from 'lucide-react'
+import { useCallback, useState } from 'react'
+
+interface RPCRequest {
+  id: string
+  rpcUrl: string
+  method: string
+  params: string
+  response: unknown
+  latency: number | null
+}
 
 const commonMethods = [
   'eth_blockNumber',
@@ -28,185 +38,311 @@ const commonMethods = [
   'eth_getTransactionCount',
   'eth_getBlockByNumber',
   'eth_getTransactionByHash',
+  'custom',
 ]
 
-const defaultParams = {
-  eth_blockNumber: '[]',
-  eth_getBalance: '["0x742d35Cc6634C0532925a3b844Bc454e4438f44e", "latest"]',
-  eth_getTransactionCount:
-    '["0x742d35Cc6634C0532925a3b844Bc454e4438f44e", "latest"]',
-  eth_getBlockByNumber: '["latest", false]',
-  eth_getTransactionByHash:
-    '["0x88df016429689c079f3b2f6ad39fa052532c56795b733da78a91ebe6a713944b"]',
+const defaultParams: Record<string, string> = {
+  eth_blockNumber: JSON.stringify(
+    {
+      jsonrpc: '2.0',
+      method: 'eth_blockNumber',
+      params: [],
+      id: 1,
+    },
+    null,
+    2,
+  ),
+  eth_getBalance: JSON.stringify(
+    {
+      jsonrpc: '2.0',
+      method: 'eth_getBalance',
+      params: ['0x742d35Cc6634C0532925a3b844Bc454e4438f44e', 'latest'],
+      id: 1,
+    },
+    null,
+    2,
+  ),
+  eth_getTransactionCount: JSON.stringify(
+    {
+      jsonrpc: '2.0',
+      method: 'eth_getTransactionCount',
+      params: ['0x742d35Cc6634C0532925a3b844Bc454e4438f44e', 'latest'],
+      id: 1,
+    },
+    null,
+    2,
+  ),
+  eth_getBlockByNumber: JSON.stringify(
+    {
+      jsonrpc: '2.0',
+      method: 'eth_getBlockByNumber',
+      params: ['0x1b4', true],
+      id: 1,
+    },
+    null,
+    2,
+  ),
+  eth_getTransactionByHash: JSON.stringify(
+    {
+      jsonrpc: '2.0',
+      method: 'eth_getTransactionByHash',
+      params: [
+        '0x88df016429689c079f3b2f6ad39fa052532c56795b733da78a91ebe6a713944b',
+      ],
+      id: 1,
+    },
+    null,
+    2,
+  ),
+  custom: JSON.stringify(
+    {
+      jsonrpc: '2.0',
+      method: 'method_name',
+      params: [],
+      id: 1,
+    },
+    null,
+    2,
+  ),
 }
 
 const RPCTool: React.FC = () => {
-  const [rpcUrl, setRpcUrl] = useState('')
-  const [params, setParams] = useState('')
-  const [response, setResponse] = useState<any>(null)
-  const [latency, setLatency] = useState<number | null>(null)
-  const [latencies, setLatencies] = useState<
-    { time: number; latency: number }[]
-  >([])
-  const [isPinging, setIsPinging] = useState(false)
+  const [requests, setRequests] = useState<RPCRequest[]>([
+    {
+      id: '1',
+      rpcUrl: '',
+      method: 'eth_blockNumber',
+      params: defaultParams.eth_blockNumber,
+      response: null,
+      latency: null,
+    },
+  ])
+  const [activeTab, setActiveTab] = useState('1')
   const [isLoading, setIsLoading] = useState(false)
-  const pingIntervalRef = useRef<NodeJS.Timeout | null>(null)
-  const [currentMethod, setCurrentMethod] = useState('eth_blockNumber')
+  const [openPopover, setOpenPopover] = useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
 
-  useEffect(() => {
-    if (currentMethod && defaultParams[currentMethod]) {
-      setParams(defaultParams[currentMethod])
-    }
-  }, [currentMethod])
+  const handleAddTab = () => {
+    const newId = (
+      Number.parseInt(requests[requests.length - 1].id) + 1
+    ).toString()
+    setRequests([
+      ...requests,
+      {
+        id: newId,
+        rpcUrl: '',
+        method: 'eth_blockNumber',
+        params: defaultParams.eth_blockNumber,
+        response: null,
+        latency: null,
+      },
+    ])
+    setActiveTab(newId)
+  }
 
-  const sendRequest = async (isPingRequest = false) => {
+  const updateRequest = (id: string, updates: Partial<RPCRequest>) => {
+    setRequests(
+      requests.map((req) => (req.id === id ? { ...req, ...updates } : req)),
+    )
+  }
+
+  const sendRequest = async (id: string) => {
+    setIsLoading(true)
+    const request = requests.find((req) => req.id === id)
+    if (!request) return
+
     try {
       const startTime = Date.now()
-      const res = await fetch(rpcUrl, {
+      const res = await fetch(request.rpcUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           jsonrpc: '2.0',
           id: 1,
-          method: currentMethod,
-          params: JSON.parse(params),
+          method: request.method,
+          params: JSON.parse(request.params),
         }),
       })
       const endTime = Date.now()
-      const newLatency = endTime - startTime
-      setLatency(newLatency)
-      if (isPingRequest) {
-        setLatencies((prev) => {
-          const newLatencies = [...prev, { time: endTime, latency: newLatency }]
-          return newLatencies.slice(-60) // Keep last 60 seconds of data
-        })
-      }
       const data = await res.json()
-      setResponse(data)
+      updateRequest(id, { response: data, latency: endTime - startTime })
     } catch (error) {
-      setResponse({ error: error.message })
+      updateRequest(id, {
+        response: { error: (error as Error).message },
+        latency: null,
+      })
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const handleSendRequest = async () => {
-    setIsLoading(true)
-    await sendRequest()
-    setIsLoading(false)
-  }
+  const handleMethodChange = useCallback(
+    (id: string, method: string) => {
+      updateRequest(id, {
+        method,
+        params:
+          method === 'custom'
+            ? defaultParams[method]
+            : JSON.stringify(JSON.parse(defaultParams[method]), null, 2),
+      })
+      setOpenPopover(null)
+      setSearchTerm('')
+    },
+    [updateRequest],
+  )
 
-  const togglePing = () => {
-    if (isPinging) {
-      setIsPinging(false)
-      if (pingIntervalRef.current) {
-        clearInterval(pingIntervalRef.current)
-        pingIntervalRef.current = null
-      }
-    } else {
-      setIsPinging(true)
-      setLatencies([]) // Clear previous latencies
-      sendRequest(true) // Initial request
-      pingIntervalRef.current = setInterval(() => {
-        sendRequest(true)
-      }, 1000) // Ping every 1 second
+  const formatJson = (value: string) => {
+    try {
+      return JSON.stringify(JSON.parse(value), null, 2)
+    } catch {
+      return value
     }
   }
 
-  useEffect(() => {
-    return () => {
-      if (pingIntervalRef.current) {
-        clearInterval(pingIntervalRef.current)
-        pingIntervalRef.current = null
-      }
+  const filteredMethods = commonMethods.filter((method) =>
+    method.toLowerCase().includes(searchTerm.toLowerCase()),
+  )
+
+  const validateUrl = (url: string) => {
+    try {
+      new URL(url)
+      return true
+    } catch (_) {
+      return false
     }
-  }, [])
+  }
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-bold mb-4">RPC Tool</h2>
-      <Input
-        type="text"
-        value={rpcUrl}
-        onChange={(e) => setRpcUrl(e.target.value)}
-        placeholder="RPC URL"
-      />
-      <div className="flex space-x-2">
-        <Select onValueChange={setCurrentMethod} value={currentMethod}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select method" />
-          </SelectTrigger>
-          <SelectContent>
-            {commonMethods.map((m) => (
-              <SelectItem key={m} value={m}>
-                {m}
-              </SelectItem>
+      <h2 className="text-2xl font-bold mb-4 w-full">RPC Tool</h2>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <div className="flex items-center">
+          <TabsList>
+            {requests.map((req) => (
+              <TabsTrigger key={req.id} value={req.id}>
+                Request {req.id}
+              </TabsTrigger>
             ))}
-          </SelectContent>
-        </Select>
-        <Input
-          type="text"
-          value={currentMethod}
-          onChange={(e) => setCurrentMethod(e.target.value)}
-          placeholder="Custom method"
-        />
-      </div>
-      <Textarea
-        value={params}
-        onChange={(e) => setParams(e.target.value)}
-        placeholder="Params (JSON)"
-        className="font-mono"
-      />
-      <div className="flex space-x-2">
-        <Button onClick={handleSendRequest} disabled={isLoading || isPinging}>
-          {isLoading ? 'Sending...' : 'Send Request'}
-        </Button>
-        <Button onClick={togglePing} variant="secondary" disabled={isLoading}>
-          {isPinging ? 'Stop Pinging' : 'Start Pinging'}
-        </Button>
-      </div>
-      {latency !== null && (
-        <div className="text-sm text-muted-foreground">
-          Latest Latency: {latency}ms
+            <Button
+              onClick={handleAddTab}
+              variant="ghost"
+              size="icon"
+              className="ml-2 h-8 w-8"
+            >
+              <PlusIcon className="h-4 w-4" />
+            </Button>
+          </TabsList>
         </div>
-      )}
-      {isPinging && latencies.length > 0 && (
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={latencies}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="time"
-                tickFormatter={(unixTime) =>
-                  new Date(unixTime).toLocaleTimeString()
-                }
-                domain={['auto', 'auto']}
-                type="number"
-                scale="time"
+        {requests.map((req) => (
+          <TabsContent key={req.id} value={req.id} className="space-y-4">
+            <div className="flex space-x-2 items-center">
+              <Input
+                value={req.rpcUrl}
+                onChange={(e) => {
+                  const newValue = e.target.value.toLowerCase()
+                  updateRequest(req.id, { rpcUrl: newValue })
+                }}
+                onBlur={(e) => {
+                  if (!validateUrl(e.target.value)) {
+                    alert('Please enter a valid URL')
+                    updateRequest(req.id, { rpcUrl: '' })
+                  }
+                }}
+                placeholder="http://localhost:8545"
+                className="flex-grow bg-muted"
               />
-              <YAxis domain={[0, 'auto']} />
-              <Tooltip
-                labelFormatter={(value) => new Date(value).toLocaleString()}
-                formatter={(value) => [`${value}ms`, 'Latency']}
+              <Button
+                onClick={() => sendRequest(req.id)}
+                disabled={isLoading || !validateUrl(req.rpcUrl)}
+              >
+                Send
+              </Button>
+            </div>
+            <div className="relative">
+              <CodeMirror
+                value={req.params}
+                height="200px"
+                extensions={[json()]}
+                onChange={(value) => updateRequest(req.id, { params: value })}
+                className="border border-input rounded-md"
               />
-              <Legend />
-              <Line
-                type="linear"
-                dataKey="latency"
-                stroke="#8884d8"
-                name="Latency (ms)"
-                isAnimationActive={false}
-                dot={false}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-      {response && (
-        <div className="bg-muted p-4 rounded overflow-auto max-h-60">
-          <JsonView data={response} />
-        </div>
-      )}
+              <div className="absolute top-4 right-2 flex space-x-2 text-muted-foreground">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={() =>
+                        updateRequest(req.id, {
+                          params: formatJson(req.params),
+                        })
+                      }
+                      variant="ghost"
+                      size="icon"
+                      className="w-5 h-5 hover:bg-transparent"
+                    >
+                      <FileJsonIcon className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Format JSON</TooltipContent>
+                </Tooltip>
+                <Popover
+                  open={openPopover === req.id}
+                  onOpenChange={(open) => setOpenPopover(open ? req.id : null)}
+                >
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      role="combobox"
+                      size="icon"
+                      aria-expanded={openPopover === req.id}
+                      className="w-5 h-5 hover:bg-transparent"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        setOpenPopover(openPopover === req.id ? null : req.id)
+                      }}
+                    >
+                      <ComputerIcon className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[200px] p-0">
+                    <Command>
+                      <CommandInput
+                        placeholder="Search method..."
+                        value={searchTerm}
+                        onValueChange={setSearchTerm}
+                      />
+                      <CommandList>
+                        {filteredMethods.map((method) => (
+                          <CommandItem
+                            key={method}
+                            onSelect={() => handleMethodChange(req.id, method)}
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              {method}
+                              {req.method === method && (
+                                <CheckIcon className="h-4 w-4" />
+                              )}
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+            {req.latency !== null && (
+              <div className="text-sm text-muted-foreground">
+                Latency: {req.latency}ms
+              </div>
+            )}
+            {req.response && (
+              <div className="bg-muted p-4 rounded overflow-auto max-h-60">
+                <JsonView data={req.response} />
+              </div>
+            )}
+          </TabsContent>
+        ))}
+      </Tabs>
     </div>
   )
 }
