@@ -6,7 +6,7 @@
     "distDir": "../dist"
   },
   "package": {
-    "productName": "raybit",
+    "productName": "raar",
     "version": "0.1.0"
   },
   "tauri": {
@@ -40,7 +40,7 @@
     },
     "windows": [
       {
-        "title": "raybit",
+        "title": "raar",
         "width": 1200,
         "height": 800
       }
@@ -51,7 +51,7 @@
     "bundle": {
       "active": true,
       "targets": "all",
-      "identifier": "raybit.dev",
+      "identifier": "raar.dev",
       "icon": [
         "icons/32x32.png",
         "icons/128x128.png",

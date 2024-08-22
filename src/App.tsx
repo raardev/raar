@@ -12,7 +12,6 @@ import WalletManagement from '@/components/WalletManagement'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ConnectKitProvider, getDefaultConfig } from 'connectkit'
-
 import {
   CalculatorIcon,
   FileTextIcon,
@@ -25,7 +24,7 @@ import {
   WalletIcon,
   ZapIcon,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Toaster } from 'sonner'
 import { mainnet } from 'viem/chains'
 import { WagmiProvider, createConfig } from 'wagmi'
@@ -37,15 +36,15 @@ const config = createConfig(
     chains: [mainnet],
 
     // Required API Keys
-    walletConnectProjectId: '927b0f2c5d6fdad04dac586d85e10cee', // raybit.dev
+    walletConnectProjectId: '927b0f2c5d6fdad04dac586d85e10cee', // raar.dev
 
     // Required App Info
-    appName: 'RayBit',
+    appName: 'RaaR',
 
     // Optional App Info
     appDescription: 'Your App Description',
-    appUrl: 'https://raybit.dev',
-    appIcon: 'https://raybit.dev/logo.png', // your app's icon, no bigger than 1024x1024px (max. 1MB)
+    appUrl: 'https://raar.dev',
+    appIcon: 'https://raar.dev/logo.png', // your app's icon, no bigger than 1024x1024px (max. 1MB)
   }),
 )
 
@@ -69,7 +68,13 @@ const sidebarItems = [
 const queryClient = new QueryClient()
 
 function App() {
-  const [activeTab, setActiveTab] = useState('rpcTool')
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem('activeTab') || 'rpcTool'
+  })
+
+  useEffect(() => {
+    localStorage.setItem('activeTab', activeTab)
+  }, [activeTab])
 
   return (
     <WagmiProvider config={config}>
@@ -84,7 +89,11 @@ function App() {
               />
 
               <div className="flex-1 p-4 overflow-auto">
-                {activeTab === 'rpcTool' && <RPCTool />}
+                <RPCTool
+                  style={{
+                    display: activeTab === 'rpcTool' ? 'block' : 'none',
+                  }}
+                />
                 {activeTab === 'chainList' && <ChainList />}
                 {activeTab === 'walletManagement' && <WalletManagement />}
                 {activeTab === 'blockExplorer' && <BlockExplorer />}

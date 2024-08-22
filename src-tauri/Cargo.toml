@@ -1,5 +1,5 @@
 [package]
-name = "raybit"
+name = "raar"
 version = "0.1.0"
 description = "A Tauri App"
 authors = ["you"]
@@ -11,7 +11,12 @@ edition = "2021"
 tauri-build = { version = "1", features = [] }
 
 [dependencies]
-tauri = { version = "1", features = [ "clipboard-write-text", "fs-all", "dialog-save", "shell-open"] }
+tauri = { version = "1", features = [
+    "clipboard-write-text",
+    "fs-all",
+    "dialog-save",
+    "shell-open",
+] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }

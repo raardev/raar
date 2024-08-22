@@ -17,6 +17,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { useRPCToolStore } from '@/stores/rpcToolStore'
 import { json } from '@codemirror/lang-json'
 import { writeText } from '@tauri-apps/api/clipboard'
 import { save } from '@tauri-apps/api/dialog'
@@ -33,18 +34,6 @@ import {
 } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { toast } from 'sonner'
-
-interface RPCRequest {
-  id: string
-  rpcUrl: string
-  method: string
-  params: string
-  response: {
-    status?: number
-    statusText?: string
-  }
-  latency: number | null
-}
 
 const commonMethods = [
   'eth_blockNumber',
@@ -120,18 +109,9 @@ const defaultParams: Record<string, string> = {
   ),
 }
 
-const RPCTool: React.FC = () => {
-  const [requests, setRequests] = useState<RPCRequest[]>([
-    {
-      id: '1',
-      rpcUrl: '',
-      method: 'eth_blockNumber',
-      params: defaultParams.eth_blockNumber,
-      response: null,
-      latency: null,
-    },
-  ])
-  const [activeTab, setActiveTab] = useState('1')
+const RPCTool: React.FC<{ style?: React.CSSProperties }> = ({ style }) => {
+  const { requests, activeTab, addRequest, updateRequest, setActiveTab } =
+    useRPCToolStore()
   const [isLoading, setIsLoading] = useState(false)
   const [openPopover, setOpenPopover] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -141,57 +121,17 @@ const RPCTool: React.FC = () => {
 
   const handleAddTab = () => {
     const newId = (
-      Number.parseInt(requests[requests.length - 1].id) + 1
+      Math.max(...requests.map((req) => Number.parseInt(req.id))) + 1
     ).toString()
-    setRequests([
-      ...requests,
-      {
-        id: newId,
-        rpcUrl: '',
-        method: 'eth_blockNumber',
-        params: defaultParams.eth_blockNumber,
-        response: null,
-        latency: null,
-      },
-    ])
+    addRequest({
+      id: newId,
+      rpcUrl: '',
+      method: 'eth_blockNumber',
+      params: defaultParams.eth_blockNumber,
+      response: null,
+      latency: null,
+    })
     setActiveTab(newId)
-  }
-
-  const updateRequest = (id: string, updates: Partial<RPCRequest>) => {
-    setRequests(
-      requests.map((req) => (req.id === id ? { ...req, ...updates } : req)),
-    )
-  }
-
-  const sendRequest = async (id: string) => {
-    setIsLoading(true)
-    const request = requests.find((req) => req.id === id)
-    if (!request) return
-
-    try {
-      const startTime = Date.now()
-      const parsedParams = JSON.parse(request.params)
-      const res = await fetch(request.rpcUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 1,
-          method: request.method,
-          params: parsedParams.params,
-        }),
-      })
-      const endTime = Date.now()
-      const data = await res.json()
-      updateRequest(id, { response: data, latency: endTime - startTime })
-    } catch (error) {
-      updateRequest(id, {
-        response: { error: (error as Error).message },
-        latency: null,
-      })
-    } finally {
-      setIsLoading(false)
-    }
   }
 
   const handleMethodChange = useCallback(
@@ -282,8 +222,39 @@ const RPCTool: React.FC = () => {
     return obj
   }
 
+  const sendRequest = async (id: string) => {
+    setIsLoading(true)
+    const request = requests.find((req) => req.id === id)
+    if (!request) return
+
+    try {
+      const startTime = Date.now()
+      const parsedParams = JSON.parse(request.params)
+      const res = await fetch(request.rpcUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: request.method,
+          params: parsedParams.params,
+        }),
+      })
+      const endTime = Date.now()
+      const data = await res.json()
+      updateRequest(id, { response: data, latency: endTime - startTime })
+    } catch (error) {
+      updateRequest(id, {
+        response: { error: (error as Error).message },
+        latency: null,
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" style={style}>
       <h2 className="text-2xl font-bold mb-4 w-full">RPC Tool</h2>
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="flex items-center">

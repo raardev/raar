@@ -23,7 +23,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       <div className="flex items-center mb-6 pl-2">
         <img
           src="/logo.svg"
-          alt="raybit"
+          alt="RaaR"
           width={32}
           height={32}
           className="mr-2"
