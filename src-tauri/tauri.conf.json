@@ -6,7 +6,7 @@
     "distDir": "../dist"
   },
   "package": {
-    "productName": "raar",
+    "productName": "RaaR",
     "version": "0.1.0"
   },
   "tauri": {
@@ -40,7 +40,7 @@
     },
     "windows": [
       {
-        "title": "raar",
+        "title": "RaaR",
         "width": 1200,
         "height": 800
       }
