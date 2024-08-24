@@ -12,10 +12,10 @@ export interface TransactionInfo {
 }
 
 export interface ValueChange {
-  type: 'eth' | 'token' | 'nft'
+  type: 'eth' | 'token' | 'nft' | 'erc1155'
   address: string
   amount: string
-  usdValue: string
+  usdValue?: string
   token?: string
   tokenId?: string
   contractAddress?: string
