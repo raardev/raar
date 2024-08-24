@@ -1,4 +1,3 @@
-import BlockExplorer from '@/components/BlockExplorer'
 import ChainList from '@/components/ChainList'
 import ContractInteraction from '@/components/ContractInteraction'
 import ContractMap from '@/components/ContractMap'
@@ -8,6 +7,7 @@ import FourBytes from '@/components/FourBytes'
 import MultiChainGasTracker from '@/components/MultiChainGasTracker'
 import RPCTool from '@/components/RPCTool'
 import Sidebar from '@/components/Sidebar'
+import TransactionTracer from '@/components/TransactionTracer'
 import WalletGenerator from '@/components/WalletGenerator'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -19,7 +19,7 @@ import {
   GitBranchIcon,
   HashIcon,
   ListIcon,
-  SearchIcon,
+  SearchXIcon,
   ServerIcon,
   WalletIcon,
   ZapIcon,
@@ -52,7 +52,6 @@ const sidebarItems = [
   { id: 'rpcTool', label: 'RPC Tool', icon: ZapIcon },
   { id: 'chainList', label: 'Chain List', icon: ListIcon },
   { id: 'walletGenerator', label: 'Wallet Generator', icon: WalletIcon },
-  { id: 'blockExplorer', label: 'Block Explorer', icon: SearchIcon },
   { id: 'ethUnitConverter', label: 'ETH Unit Converter', icon: CalculatorIcon },
   { id: 'devnetTool', label: 'Devnet Tool', icon: ServerIcon },
   {
@@ -63,6 +62,7 @@ const sidebarItems = [
   { id: 'fourBytes', label: '4bytes Tool', icon: HashIcon },
   { id: 'contractMap', label: 'Contract Map', icon: GitBranchIcon },
   { id: 'multiChainGasTracker', label: 'Gas Tracker', icon: GaugeIcon },
+  { id: 'transactionTracer', label: 'Transaction Tracer', icon: SearchXIcon },
 ]
 
 const queryClient = new QueryClient()
@@ -96,7 +96,6 @@ function App() {
                 />
                 {activeTab === 'chainList' && <ChainList />}
                 {activeTab === 'walletGenerator' && <WalletGenerator />}
-                {activeTab === 'blockExplorer' && <BlockExplorer />}
                 {activeTab === 'ethUnitConverter' && <EthereumUnitConverter />}
                 {activeTab === 'devnetTool' && <DevnetTool />}
                 {activeTab === 'contractInteraction' && <ContractInteraction />}
@@ -105,6 +104,7 @@ function App() {
                 {activeTab === 'multiChainGasTracker' && (
                   <MultiChainGasTracker />
                 )}
+                {activeTab === 'transactionTracer' && <TransactionTracer />}
               </div>
               <Toaster />
             </div>
