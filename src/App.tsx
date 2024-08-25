@@ -2,6 +2,7 @@ import ChainList from '@/components/ChainList'
 import ContractInteraction from '@/components/ContractInteraction'
 import ContractMap from '@/components/ContractMap'
 import DevnetTool from '@/components/DevnetTool'
+import ErrorBoundary from '@/components/ErrorBoundary'
 import EthereumUnitConverter from '@/components/EthereumUnitConverter'
 import FourBytes from '@/components/FourBytes'
 import MultiChainGasTracker from '@/components/MultiChainGasTracker'
@@ -94,7 +95,11 @@ function App() {
                     display: activeTab === 'rpcTool' ? 'block' : 'none',
                   }}
                 />
-                {activeTab === 'chainList' && <ChainList />}
+                {activeTab === 'chainList' && (
+                  <ErrorBoundary>
+                    <ChainList />
+                  </ErrorBoundary>
+                )}{' '}
                 {activeTab === 'walletGenerator' && <WalletGenerator />}
                 {activeTab === 'ethUnitConverter' && <EthereumUnitConverter />}
                 {activeTab === 'devnetTool' && <DevnetTool />}

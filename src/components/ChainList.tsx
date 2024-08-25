@@ -1,11 +1,6 @@
 import { VirtualizedDataTable } from '@/components/VirtualizedDataTable'
+import { VirtualizedList } from '@/components/VirtualizedList'
 import { Input } from '@/components/ui/input'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
 import { type Chain, chains } from '@/config/chains'
 import { cn } from '@/lib/utils'
 import { type ColumnDef, createColumnHelper } from '@tanstack/react-table'
@@ -13,8 +8,10 @@ import {
   ChevronDown,
   ChevronUp,
   Clock,
-  ConstructionIcon,
-  LaptopMinimal,
+  CodeIcon,
+  Copy,
+  LaptopMinimalIcon,
+  Loader2,
 } from 'lucide-react'
 import type React from 'react'
 import { useCallback, useMemo, useState } from 'react'
@@ -271,10 +268,6 @@ const ChainList: React.FC = () => {
       const totalRPCs = chain.rpc.length
       const sortedRPCs = sortRPCs(chain.rpc)
 
-      const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-        e.stopPropagation()
-      }
-
       return (
         <div>
           <button
@@ -285,101 +278,87 @@ const ChainList: React.FC = () => {
             <span>{`${totalRPCs} RPCs`}</span>
           </button>
           {isExpanded && (
-            <ScrollArea className="h-full mt-2" onScroll={handleScroll}>
-              <div className="max-h-[400px] overflow-y-auto">
-                <div className="space-y-2">
-                  {sortedRPCs.map((rpc) => {
-                    const rpcStatus = rpcStatuses[rpc] || {
-                      status: 'checking',
-                      namespaces: {
-                        eth: false,
-                        net: false,
-                        web3: false,
-                        debug: false,
-                        trace: false,
-                        txpool: false,
-                      },
-                      url: rpc,
-                    }
-                    return (
-                      <div
-                        key={rpc}
-                        className={cn(
-                          'flex flex-col py-1',
-                          rpcStatus.status === 'unhealthy' &&
-                            'text-muted-foreground',
-                        )}
-                      >
-                        <div className="flex items-center">
-                          <div className="flex items-center flex-grow mr-2 min-w-0">
-                            {getStatusCircle(rpcStatus.status)}
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span
-                                  className="cursor-pointer hover:underline truncate text-sm"
-                                  onClick={() => handleCopy(rpc)}
-                                >
-                                  {rpc}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Click to copy</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap mt-1 text-xs ml-5 gap-1 text-muted-foreground">
-                          <div className="flex items-center gap-1 flex-wrap">
-                            <ConstructionIcon className="w-3 h-3 mr-1" />
-                            {[
-                              'eth',
-                              'net',
-                              'web3',
-                              'debug',
-                              'trace',
-                              'txpool',
-                            ].map((namespace) => (
-                              <span
-                                key={namespace}
-                                className={cn(
-                                  'flex items-center text-xs',
-                                  rpcStatus.namespaces[namespace]
-                                    ? 'text-green-500'
-                                    : 'text-red-500',
-                                )}
-                              >
-                                {namespace}
-                              </span>
-                            ))}
-                          </div>
-                          <div className="flex items-center gap-2 w-full">
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              <span className="text-xs">
-                                {rpcStatus.latency
-                                  ? `${rpcStatus.latency}ms`
-                                  : '-'}
-                              </span>
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <LaptopMinimal className="w-3 h-3" />
-                              <span className="text-xs truncate">
-                                {rpcStatus.clientVersion || 'Unknown'}
-                              </span>
-                            </span>
-                          </div>
-                        </div>
+            <VirtualizedList
+              items={sortedRPCs}
+              maxHeight={400}
+              estimatedItemHeight={80}
+              renderItem={(rpc, index) => {
+                const rpcStatus = rpcStatuses[rpc] || {
+                  status: 'checking',
+                  namespaces: {
+                    eth: false,
+                    net: false,
+                    web3: false,
+                    debug: false,
+                    trace: false,
+                    txpool: false,
+                  },
+                  url: rpc,
+                  clientVersion: 'Unknown',
+                  latency: undefined,
+                }
+                return (
+                  <div
+                    className={cn(
+                      'flex flex-col text-xs p-1 gap-1',
+                      rpcStatus.status === 'unhealthy' && 'text-gray-400',
+                    )}
+                  >
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center">
+                        {getStatusCircle(rpcStatus.status)}
+                        <span className="font-medium">{rpc}</span>
                       </div>
-                    )
-                  })}
-                </div>
-              </div>
-            </ScrollArea>
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(rpc)}
+                        className="p-1 hover:bg-gray-100 rounded flex items-center"
+                      >
+                        <Copy size={14} />
+                      </button>
+                    </div>
+                    <div className="flex gap-3 ml-5">
+                      {rpcStatus.latency ? (
+                        <span className="flex items-center">
+                          <Clock size={14} className="mr-1" />
+                          {rpcStatus.latency}ms
+                        </span>
+                      ) : (
+                        <span className="flex items-center">
+                          <Loader2 size={14} className="mr-1 animate-spin" />
+                          Checking latency...
+                        </span>
+                      )}
+                      <span className="flex items-center">
+                        <LaptopMinimalIcon size={14} className="mr-1" />
+                        {rpcStatus.clientVersion}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1 ml-5 items-center">
+                      <CodeIcon size={14} />
+                      {Object.entries(rpcStatus.namespaces).map(
+                        ([namespace, supported]) => (
+                          <span
+                            key={namespace}
+                            className={cn(
+                              'mr-1',
+                              supported ? 'text-green-600' : 'text-red-600',
+                            )}
+                          >
+                            {namespace}
+                          </span>
+                        ),
+                      )}
+                    </div>
+                  </div>
+                )
+              }}
+            />
           )}
         </div>
       )
     },
-    [expandedChains, rpcStatuses, toggleChainExpansion, sortRPCs],
+    [expandedChains, rpcStatuses, sortRPCs, toggleChainExpansion, handleCopy],
   )
 
   const filteredChains = useMemo(() => {
