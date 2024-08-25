@@ -41,8 +41,6 @@ export const chains: Chain[] = [
       'https://api.stateless.solutions/ethereum/v1/demo',
       'https://ethereum.rpc.subquery.network/public',
       'https://rpc.graffiti.farm',
-      'https://rpc.public.curie.radiumblock.co/http/ethereum',
-      'https://rpc.public.curie.radiumblock.co/ws/ethereum',
     ],
   },
   {

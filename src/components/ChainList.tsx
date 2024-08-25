@@ -1,5 +1,6 @@
 import { VirtualizedDataTable } from '@/components/VirtualizedDataTable'
 import { Input } from '@/components/ui/input'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Tooltip,
   TooltipContent,
@@ -37,94 +38,127 @@ const ChainList: React.FC = () => {
     {},
   )
   const [expandedChains, setExpandedChains] = useState<Set<number>>(new Set())
+  const [activeRequests, setActiveRequests] = useState<{
+    [key: number]: AbortController
+  }>({})
 
-  const checkRPCHealth = useCallback(async (rpc: string) => {
-    const startTime = Date.now()
-    try {
-      const client = createPublicClient({
-        transport: http(rpc),
-      })
+  const checkRPCHealth = useCallback(
+    async (rpc: string, signal?: AbortSignal) => {
+      const startTime = Date.now()
+      try {
+        const client = createPublicClient({
+          transport: http(rpc),
+        })
 
-      const [blockNumber, clientVersion] = await Promise.all([
-        client.request({ method: 'eth_blockNumber', params: [] }),
-        client.request({ method: 'web3_clientVersion', params: [] }),
-      ])
+        const [blockNumber, clientVersion] = await Promise.all([
+          client.request({ method: 'eth_blockNumber', params: [] }, { signal }),
+          client.request(
+            { method: 'web3_clientVersion', params: [] },
+            { signal },
+          ),
+        ])
 
-      const endTime = Date.now()
-      const latency = endTime - startTime
+        const endTime = Date.now()
+        const latency = endTime - startTime
 
-      const namespaces = ['eth', 'net', 'web3', 'debug', 'trace', 'txpool']
-      const namespaceResults = await Promise.all(
-        namespaces.map(async (namespace) => {
-          try {
-            switch (namespace) {
-              case 'eth':
-                await client.request({ method: 'eth_blockNumber', params: [] })
-                break
-              case 'net':
-                await client.request({ method: 'net_version', params: [] })
-                break
-              case 'web3':
-                await client.request({
-                  method: 'web3_clientVersion',
-                  params: [],
-                })
-                break
-              case 'debug':
-                await client.request({
-                  method: 'debug_traceBlockByNumber',
-                  params: ['latest', {}],
-                })
-                break
-              case 'trace':
-                await client.request({
-                  method: 'trace_block',
-                  params: ['latest'],
-                })
-                break
-              case 'txpool':
-                await client.request({ method: 'txpool_status', params: [] })
-                break
+        const namespaces = ['eth', 'net', 'web3', 'debug', 'trace', 'txpool']
+        const namespaceResults = await Promise.all(
+          namespaces.map(async (namespace) => {
+            try {
+              switch (namespace) {
+                case 'eth':
+                  await client.request(
+                    { method: 'eth_blockNumber', params: [] },
+                    { signal },
+                  )
+                  break
+                case 'net':
+                  await client.request(
+                    { method: 'net_version', params: [] },
+                    { signal },
+                  )
+                  break
+                case 'web3':
+                  await client.request(
+                    {
+                      method: 'web3_clientVersion',
+                      params: [],
+                    },
+                    { signal },
+                  )
+                  break
+                case 'debug':
+                  await client.request(
+                    {
+                      method: 'debug_traceBlockByNumber',
+                      params: ['latest', {}],
+                    },
+                    { signal },
+                  )
+                  break
+                case 'trace':
+                  await client.request(
+                    {
+                      method: 'trace_block',
+                      params: ['latest'],
+                    },
+                    { signal },
+                  )
+                  break
+                case 'txpool':
+                  await client.request(
+                    { method: 'txpool_status', params: [] },
+                    { signal },
+                  )
+                  break
+              }
+              return [namespace, true]
+            } catch {
+              return [namespace, false]
             }
-            return [namespace, true]
-          } catch {
-            return [namespace, false]
-          }
-        }),
-      )
+          }),
+        )
 
-      const supportedNamespaces = Object.fromEntries(namespaceResults)
+        const supportedNamespaces = Object.fromEntries(namespaceResults)
 
-      return {
-        status: 'healthy' as const,
-        latency,
-        namespaces: supportedNamespaces,
-        clientVersion: clientVersion as string,
-        url: rpc,
+        return {
+          status: 'healthy' as const,
+          latency,
+          namespaces: supportedNamespaces,
+          clientVersion: clientVersion as string,
+          url: rpc,
+        }
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          throw error // Re-throw AbortError to be caught in the calling function
+        }
+        console.error('RPC health check failed:', error)
+        return {
+          status: 'unhealthy' as const,
+          namespaces: {
+            eth: false,
+            net: false,
+            web3: false,
+            debug: false,
+            trace: false,
+            txpool: false,
+          },
+          clientVersion: 'Unknown',
+          url: rpc,
+          latency: undefined,
+        }
       }
-    } catch (error) {
-      console.error('RPC health check failed:', error)
-      return {
-        status: 'unhealthy' as const,
-        namespaces: {
-          eth: false,
-          net: false,
-          web3: false,
-          debug: false,
-          trace: false,
-          txpool: false,
-        },
-        clientVersion: 'Unknown',
-        url: rpc,
-        latency: undefined,
-      }
-    }
-  }, [])
+    },
+    [],
+  )
 
   const checkChainRPCs = useCallback(
     async (chainId: number) => {
       const chain = chains.find((c) => c.chainId === chainId)
       if (chain) {
+        const abortController = new AbortController()
+        setActiveRequests((prev) => ({ ...prev, [chainId]: abortController }))
+
         const processRPCBatch = async (rpcs: string[]) => {
           const promises = rpcs.map(async (rpc) => {
             setRpcStatuses((prev) => ({
@@ -143,11 +177,19 @@ const ChainList: React.FC = () => {
                 },
               },
             }))
-            const result = await checkRPCHealth(rpc)
-            setRpcStatuses((prev) => ({
-              ...prev,
-              [rpc]: { ...prev[rpc], ...result },
-            }))
+            try {
+              const result = await checkRPCHealth(rpc, abortController.signal)
+              setRpcStatuses((prev) => ({
+                ...prev,
+                [rpc]: { ...prev[rpc], ...result },
+              }))
+            } catch (error) {
+              if (error.name === 'AbortError') {
+                console.log('Request aborted for RPC:', rpc)
+              } else {
+                console.error('Error checking RPC health:', error)
+              }
+            }
           })
           await Promise.all(promises)
         }
@@ -157,6 +199,12 @@ const ChainList: React.FC = () => {
           await processRPCBatch(batch)
           await new Promise((resolve) => setTimeout(resolve, 100))
         }
+
+        setActiveRequests((prev) => {
+          const newRequests = { ...prev }
+          delete newRequests[chainId]
+          return newRequests
+        })
       }
     },
     [chains, checkRPCHealth],
@@ -168,6 +216,15 @@ const ChainList: React.FC = () => {
         const newSet = new Set(prev)
         if (newSet.has(chainId)) {
           newSet.delete(chainId)
+          // Abort any ongoing requests for this chain
+          if (activeRequests[chainId]) {
+            activeRequests[chainId].abort()
+            setActiveRequests((prev) => {
+              const newRequests = { ...prev }
+              delete newRequests[chainId]
+              return newRequests
+            })
+          }
         } else {
           newSet.add(chainId)
           setTimeout(() => {
@@ -177,7 +234,7 @@ const ChainList: React.FC = () => {
         return newSet
       })
     },
-    [checkChainRPCs],
+    [checkChainRPCs, activeRequests],
   )
 
   const getStatusCircle = (status: RPCStatus['status']) => {
@@ -214,6 +271,10 @@ const ChainList: React.FC = () => {
       const totalRPCs = chain.rpc.length
       const sortedRPCs = sortRPCs(chain.rpc)
 
+      const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        e.stopPropagation()
+      }
+
       return (
         <div>
           <button
@@ -224,85 +285,96 @@ const ChainList: React.FC = () => {
             <span>{`${totalRPCs} RPCs`}</span>
           </button>
           {isExpanded && (
-            <div className="mt-2 space-y-2">
-              {sortedRPCs.map((rpc) => {
-                const rpcStatus = rpcStatuses[rpc] || {
-                  status: 'checking',
-                  namespaces: {
-                    eth: false,
-                    net: false,
-                    web3: false,
-                    debug: false,
-                    trace: false,
-                    txpool: false,
-                  },
-                  url: rpc,
-                }
-                return (
-                  <div
-                    key={rpc}
-                    className={cn(
-                      'flex flex-col py-1',
-                      rpcStatus.status === 'unhealthy' &&
-                        'text-muted-foreground',
-                    )}
-                  >
-                    <div className="flex items-center">
-                      <div className="flex items-center flex-grow mr-2 min-w-0">
-                        {getStatusCircle(rpcStatus.status)}
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span
-                              className="cursor-pointer hover:underline truncate text-sm"
-                              onClick={() => handleCopy(rpc)}
-                            >
-                              {rpc}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Click to copy</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap mt-1 text-xs ml-5 gap-1 text-muted-foreground">
-                      <div className="flex items-center gap-1 flex-wrap">
-                        <ConstructionIcon className="w-3 h-3 mr-1" />
-                        {['eth', 'net', 'web3', 'debug', 'trace', 'txpool'].map(
-                          (namespace) => (
-                            <span
-                              key={namespace}
-                              className={cn(
-                                'flex items-center text-xs',
-                                rpcStatus.namespaces[namespace]
-                                  ? 'text-green-500'
-                                  : 'text-red-500',
-                              )}
-                            >
-                              {namespace}
-                            </span>
-                          ),
+            <ScrollArea className="h-full mt-2" onScroll={handleScroll}>
+              <div className="max-h-[400px] overflow-y-auto">
+                <div className="space-y-2">
+                  {sortedRPCs.map((rpc) => {
+                    const rpcStatus = rpcStatuses[rpc] || {
+                      status: 'checking',
+                      namespaces: {
+                        eth: false,
+                        net: false,
+                        web3: false,
+                        debug: false,
+                        trace: false,
+                        txpool: false,
+                      },
+                      url: rpc,
+                    }
+                    return (
+                      <div
+                        key={rpc}
+                        className={cn(
+                          'flex flex-col py-1',
+                          rpcStatus.status === 'unhealthy' &&
+                            'text-muted-foreground',
                         )}
+                      >
+                        <div className="flex items-center">
+                          <div className="flex items-center flex-grow mr-2 min-w-0">
+                            {getStatusCircle(rpcStatus.status)}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span
+                                  className="cursor-pointer hover:underline truncate text-sm"
+                                  onClick={() => handleCopy(rpc)}
+                                >
+                                  {rpc}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Click to copy</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap mt-1 text-xs ml-5 gap-1 text-muted-foreground">
+                          <div className="flex items-center gap-1 flex-wrap">
+                            <ConstructionIcon className="w-3 h-3 mr-1" />
+                            {[
+                              'eth',
+                              'net',
+                              'web3',
+                              'debug',
+                              'trace',
+                              'txpool',
+                            ].map((namespace) => (
+                              <span
+                                key={namespace}
+                                className={cn(
+                                  'flex items-center text-xs',
+                                  rpcStatus.namespaces[namespace]
+                                    ? 'text-green-500'
+                                    : 'text-red-500',
+                                )}
+                              >
+                                {namespace}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="flex items-center gap-2 w-full">
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              <span className="text-xs">
+                                {rpcStatus.latency
+                                  ? `${rpcStatus.latency}ms`
+                                  : '-'}
+                              </span>
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <LaptopMinimal className="w-3 h-3" />
+                              <span className="text-xs truncate">
+                                {rpcStatus.clientVersion || 'Unknown'}
+                              </span>
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 w-full">
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          <span className="text-xs">
-                            {rpcStatus.latency ? `${rpcStatus.latency}ms` : '-'}
-                          </span>
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <LaptopMinimal className="w-3 h-3" />
-                          <span className="text-xs truncate">
-                            {rpcStatus.clientVersion || 'Unknown'}
-                          </span>
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </ScrollArea>
           )}
         </div>
       )
