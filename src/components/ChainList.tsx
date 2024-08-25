@@ -1,106 +1,35 @@
+import { VirtualizedDataTable } from '@/components/VirtualizedDataTable'
 import { Input } from '@/components/ui/input'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { type Chain, chains } from '@/config/chains'
-import { ChevronDown, ChevronUp, Pause, Play } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { type ColumnDef, createColumnHelper } from '@tanstack/react-table'
+import {
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  ConstructionIcon,
+  LaptopMinimal,
+} from 'lucide-react'
 import type React from 'react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Toaster, toast } from 'sonner'
+import { createPublicClient, http } from 'viem'
 
 interface RPCStatus {
   url: string
   status: 'healthy' | 'unhealthy' | 'checking'
   latency?: number
+  namespaces: { [key: string]: boolean }
+  clientVersion?: string
 }
 
-const CHECK_INTERVAL = 10000 // 10 seconds
-
-interface FetchingControlProps {
-  chainId: number
-  checkChainRPCs: (chainId: number) => void
-}
-
-const FetchingControl: React.FC<FetchingControlProps> = ({
-  chainId,
-  checkChainRPCs,
-}) => {
-  const [isFetching, setIsFetching] = useState(true)
-  const [nextCheckIn, setNextCheckIn] = useState(CHECK_INTERVAL / 1000)
-
-  useEffect(() => {
-    let intervalId: NodeJS.Timeout | null = null
-    if (isFetching) {
-      checkChainRPCs(chainId)
-      intervalId = setInterval(() => {
-        checkChainRPCs(chainId)
-        setNextCheckIn(CHECK_INTERVAL / 1000)
-      }, CHECK_INTERVAL)
-
-      const countdownInterval = setInterval(() => {
-        setNextCheckIn((prev) => (prev > 0 ? prev - 1 : CHECK_INTERVAL / 1000))
-      }, 1000)
-
-      return () => {
-        if (intervalId) clearInterval(intervalId)
-        clearInterval(countdownInterval)
-      }
-    }
-  }, [chainId, isFetching, checkChainRPCs])
-
-  const toggleFetching = () => {
-    setIsFetching((prev) => !prev)
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={toggleFetching}
-      className="relative w-6 h-6 focus:outline-none"
-      aria-label={isFetching ? 'Pause' : 'Start'}
-    >
-      <svg className="w-full h-full" viewBox="0 0 24 24">
-        <circle
-          className="text-muted-foreground/20"
-          strokeWidth="2"
-          stroke="currentColor"
-          fill="transparent"
-          r="10"
-          cx="12"
-          cy="12"
-        />
-        <circle
-          className="text-primary"
-          strokeWidth="2"
-          strokeDasharray="63"
-          strokeDashoffset={63 * (nextCheckIn / (CHECK_INTERVAL / 1000))}
-          strokeLinecap="round"
-          stroke="currentColor"
-          fill="transparent"
-          r="10"
-          cx="12"
-          cy="12"
-        />
-      </svg>
-      {isFetching ? (
-        <Pause className="w-3 h-3 text-primary absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
-      ) : (
-        <Play className="w-3 h-3 text-primary absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
-      )}
-    </button>
-  )
-}
+const BATCH_SIZE = 5
+const CHECK_INTERVAL = 30000 // 30 seconds
 
 const ChainList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -110,40 +39,124 @@ const ChainList: React.FC = () => {
   const [expandedChains, setExpandedChains] = useState<Set<number>>(new Set())
 
   const checkRPCHealth = useCallback(async (rpc: string) => {
+    const startTime = Date.now()
     try {
-      const startTime = Date.now()
-      const response = await fetch(rpc, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          method: 'eth_blockNumber',
-          params: [],
-          id: 1,
-        }),
+      const client = createPublicClient({
+        transport: http(rpc),
       })
+
+      const [blockNumber, clientVersion] = await Promise.all([
+        client.request({ method: 'eth_blockNumber', params: [] }),
+        client.request({ method: 'web3_clientVersion', params: [] }),
+      ])
+
       const endTime = Date.now()
-      const data = await response.json()
-      if (data.result) {
-        return { status: 'healthy' as const, latency: endTime - startTime }
+      const latency = endTime - startTime
+
+      const namespaces = ['eth', 'net', 'web3', 'debug', 'trace', 'txpool']
+      const namespaceResults = await Promise.all(
+        namespaces.map(async (namespace) => {
+          try {
+            switch (namespace) {
+              case 'eth':
+                await client.request({ method: 'eth_blockNumber', params: [] })
+                break
+              case 'net':
+                await client.request({ method: 'net_version', params: [] })
+                break
+              case 'web3':
+                await client.request({
+                  method: 'web3_clientVersion',
+                  params: [],
+                })
+                break
+              case 'debug':
+                await client.request({
+                  method: 'debug_traceBlockByNumber',
+                  params: ['latest', {}],
+                })
+                break
+              case 'trace':
+                await client.request({
+                  method: 'trace_block',
+                  params: ['latest'],
+                })
+                break
+              case 'txpool':
+                await client.request({ method: 'txpool_status', params: [] })
+                break
+            }
+            return [namespace, true]
+          } catch {
+            return [namespace, false]
+          }
+        }),
+      )
+
+      const supportedNamespaces = Object.fromEntries(namespaceResults)
+
+      return {
+        status: 'healthy' as const,
+        latency,
+        namespaces: supportedNamespaces,
+        clientVersion: clientVersion as string,
+        url: rpc,
       }
     } catch (error) {
-      // Error handling
+      console.error('RPC health check failed:', error)
+      return {
+        status: 'unhealthy' as const,
+        namespaces: {
+          eth: false,
+          net: false,
+          web3: false,
+          debug: false,
+          trace: false,
+          txpool: false,
+        },
+        clientVersion: 'Unknown',
+        url: rpc,
+        latency: undefined,
+      }
     }
-    return { status: 'unhealthy' as const }
   }, [])
 
   const checkChainRPCs = useCallback(
-    (chainId: number) => {
+    async (chainId: number) => {
       const chain = chains.find((c) => c.chainId === chainId)
       if (chain) {
-        chain.rpc.forEach(async (rpc) => {
-          const result = await checkRPCHealth(rpc)
-          setRpcStatuses((prev) => ({
-            ...prev,
-            [rpc]: { url: rpc, ...result },
-          }))
-        })
+        const processRPCBatch = async (rpcs: string[]) => {
+          const promises = rpcs.map(async (rpc) => {
+            setRpcStatuses((prev) => ({
+              ...prev,
+              [rpc]: {
+                ...prev[rpc],
+                status: 'checking',
+                url: rpc,
+                namespaces: prev[rpc]?.namespaces || {
+                  eth: false,
+                  net: false,
+                  web3: false,
+                  debug: false,
+                  trace: false,
+                  txpool: false,
+                },
+              },
+            }))
+            const result = await checkRPCHealth(rpc)
+            setRpcStatuses((prev) => ({
+              ...prev,
+              [rpc]: { ...prev[rpc], ...result },
+            }))
+          })
+          await Promise.all(promises)
+        }
+
+        for (let i = 0; i < chain.rpc.length; i += BATCH_SIZE) {
+          const batch = chain.rpc.slice(i, i + BATCH_SIZE)
+          await processRPCBatch(batch)
+          await new Promise((resolve) => setTimeout(resolve, 100))
+        }
       }
     },
     [chains, checkRPCHealth],
@@ -157,8 +170,9 @@ const ChainList: React.FC = () => {
           newSet.delete(chainId)
         } else {
           newSet.add(chainId)
-          // Immediately check RPCs when expanding
-          checkChainRPCs(chainId)
+          setTimeout(() => {
+            checkChainRPCs(chainId)
+          }, 100)
         }
         return newSet
       })
@@ -198,70 +212,102 @@ const ChainList: React.FC = () => {
     (chain: Chain) => {
       const isExpanded = expandedChains.has(chain.chainId)
       const totalRPCs = chain.rpc.length
+      const sortedRPCs = sortRPCs(chain.rpc)
 
       return (
         <div>
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => toggleChainExpansion(chain.chainId)}
-              className="flex items-center space-x-2 text-sm font-medium"
-            >
-              {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-              <span>
-                {isExpanded
-                  ? `${chain.rpc.filter((rpc) => rpcStatuses[rpc]?.status === 'healthy').length}/${totalRPCs} RPCs healthy`
-                  : `${totalRPCs} RPCs`}
-              </span>
-            </button>
-            {isExpanded && (
-              <FetchingControl
-                chainId={chain.chainId}
-                checkChainRPCs={checkChainRPCs}
-              />
-            )}
-          </div>
+          <button
+            onClick={() => toggleChainExpansion(chain.chainId)}
+            className="flex items-center space-x-2 text-sm font-medium hover:underline"
+          >
+            {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            <span>{`${totalRPCs} RPCs`}</span>
+          </button>
           {isExpanded && (
             <div className="mt-2 space-y-2">
-              {sortRPCs(chain.rpc).map((rpc, index) => (
-                <div
-                  key={index}
-                  className={`flex items-center justify-between ${
-                    rpcStatuses[rpc]?.status === 'unhealthy'
-                      ? 'text-muted-foreground'
-                      : ''
-                  }`}
-                >
-                  <div className="flex items-center space-x-2">
-                    {getStatusCircle(rpcStatuses[rpc]?.status || 'checking')}
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span
-                            className="cursor-pointer hover:underline truncate max-w-xs"
-                            onClick={() => handleCopy(rpc)}
-                          >
-                            {rpc}
+              {sortedRPCs.map((rpc) => {
+                const rpcStatus = rpcStatuses[rpc] || {
+                  status: 'checking',
+                  namespaces: {
+                    eth: false,
+                    net: false,
+                    web3: false,
+                    debug: false,
+                    trace: false,
+                    txpool: false,
+                  },
+                  url: rpc,
+                }
+                return (
+                  <div
+                    key={rpc}
+                    className={cn(
+                      'flex flex-col py-1',
+                      rpcStatus.status === 'unhealthy' &&
+                        'text-muted-foreground',
+                    )}
+                  >
+                    <div className="flex items-center">
+                      <div className="flex items-center flex-grow mr-2 min-w-0">
+                        {getStatusCircle(rpcStatus.status)}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span
+                              className="cursor-pointer hover:underline truncate text-sm"
+                              onClick={() => handleCopy(rpc)}
+                            >
+                              {rpc}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Click to copy</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap mt-1 text-xs ml-5 gap-1 text-muted-foreground">
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <ConstructionIcon className="w-3 h-3 mr-1" />
+                        {['eth', 'net', 'web3', 'debug', 'trace', 'txpool'].map(
+                          (namespace) => (
+                            <span
+                              key={namespace}
+                              className={cn(
+                                'flex items-center text-xs',
+                                rpcStatus.namespaces[namespace]
+                                  ? 'text-green-500'
+                                  : 'text-red-500',
+                              )}
+                            >
+                              {namespace}
+                            </span>
+                          ),
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 w-full">
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          <span className="text-xs">
+                            {rpcStatus.latency ? `${rpcStatus.latency}ms` : '-'}
                           </span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Click to copy</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <LaptopMinimal className="w-3 h-3" />
+                          <span className="text-xs truncate">
+                            {rpcStatus.clientVersion || 'Unknown'}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <span className="text-sm">
-                    {rpcStatuses[rpc]?.latency
-                      ? `${rpcStatuses[rpc].latency}ms`
-                      : '-'}
-                  </span>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
       )
     },
-    [expandedChains, rpcStatuses, toggleChainExpansion, checkChainRPCs],
+    [expandedChains, rpcStatuses, toggleChainExpansion, sortRPCs],
   )
 
   const filteredChains = useMemo(() => {
@@ -272,10 +318,39 @@ const ChainList: React.FC = () => {
     )
   }, [chains, searchTerm])
 
+  const columnHelper = createColumnHelper<Chain>()
+
+  const columns = useMemo<ColumnDef<Chain, any>[]>(
+    () => [
+      columnHelper.accessor((row, index) => index + 1, {
+        id: 'index',
+        cell: (info) => info.getValue(),
+        header: () => <span>#</span>,
+        size: 50,
+      }),
+      columnHelper.accessor('name', {
+        cell: (info) => info.getValue(),
+        header: () => <span>Name</span>,
+        size: 200,
+      }),
+      columnHelper.accessor('chainId', {
+        cell: (info) => info.getValue(),
+        header: () => <span>Chain ID</span>,
+        size: 100,
+      }),
+      columnHelper.accessor('rpc', {
+        cell: (info) => renderRPCGroup(info.row.original),
+        header: () => <span>RPCs</span>,
+        size: 600,
+      }),
+    ],
+    [renderRPCGroup],
+  )
+
   return (
-    <div className="container mx-auto space-y-4">
+    <div className="container mx-auto flex flex-col h-screen py-4">
       <h2 className="text-2xl font-bold mb-4">Chain List</h2>
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-4">
         <Input
           type="text"
           placeholder="Search by chain name or ID"
@@ -284,27 +359,8 @@ const ChainList: React.FC = () => {
           className="max-w-sm"
         />
       </div>
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-16">#</TableHead>
-              <TableHead className="w-1/4">Chain Name</TableHead>
-              <TableHead className="w-1/4">Chain ID</TableHead>
-              <TableHead className="w-1/2">RPC URLs</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredChains.map((chain, index) => (
-              <TableRow key={chain.chainId}>
-                <TableCell className="w-16">{index + 1}</TableCell>
-                <TableCell className="w-1/4">{chain.name}</TableCell>
-                <TableCell className="w-1/4">{chain.chainId}</TableCell>
-                <TableCell className="w-1/2">{renderRPCGroup(chain)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+      <div className="flex-grow overflow-hidden">
+        <VirtualizedDataTable columns={columns} data={filteredChains} />
       </div>
       <Toaster />
     </div>

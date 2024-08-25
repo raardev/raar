@@ -372,20 +372,6 @@ export const chains: Chain[] = [
     rpc: ['https://merlin.blockpi.network/v1/rpc/public'],
   },
   {
-    name: 'Optimism Goerli',
-    chainId: 420,
-    rpc: [
-      'https://endpoints.omniatech.io/v1/op/goerli/public',
-      'https://opt-goerli.g.alchemy.com/v2/demo',
-      'https://optimism-goerli.public.blastapi.io',
-      'https://rpc.goerli.optimism.gateway.fm',
-      'https://optimism-goerli-rpc.publicnode.com',
-      'https://api.zan.top/node/v1/opt/goerli/public',
-      'https://optimism-goerli.gateway.tenderly.co',
-      'https://gateway.tenderly.co/public/optimism-goerli',
-    ],
-  },
-  {
     name: 'Metis Andromeda',
     chainId: 1088,
     rpc: [
@@ -994,19 +980,6 @@ export const chains: Chain[] = [
     ],
   },
   {
-    name: 'Base Goerli Testnet',
-    chainId: 84531,
-    rpc: [
-      'https://base-goerli.diamondswap.org/rpc',
-      'https://base-goerli.public.blastapi.io',
-      'https://1rpc.io/base-goerli',
-      'https://base-goerli.gateway.tenderly.co',
-      'https://gateway.tenderly.co/public/base-goerli',
-      'https://base-goerli-rpc.publicnode.com',
-      'https://endpoints.omniatech.io/v1/base/goerli/public',
-    ],
-  },
-  {
     name: 'Base',
     chainId: 8453,
     rpc: [
@@ -1242,11 +1215,6 @@ export const chains: Chain[] = [
     name: 'Polygon zkEVM Cardona Testnet',
     chainId: 2442,
     rpc: ['https://polygon-zkevm-cardona.blockpi.network/v1/rpc/public'],
-  },
-  {
-    name: 'Linea Goerli Testnet',
-    chainId: 59140,
-    rpc: ['https://linea-goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161'],
   },
   {
     name: 'Linea Sepolia Testnet',
