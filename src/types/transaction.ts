@@ -34,3 +34,14 @@ export interface Action {
   operator?: string
   tokenId?: string
 }
+
+export interface CallTrace {
+  from: string
+  to: string
+  input: string
+  output: string
+  value: string
+  gasUsed: string
+  type: string
+  calls?: CallTrace[]
+}

@@ -195,3 +195,11 @@ export const formatDiff = (oldValue: string, newValue: string): string => {
   const sign = diff >= 0 ? '+' : ''
   return `(${sign}${formattedDiff})`
 }
+
+export const fetchCallTrace = async (client: any, hash: string) => {
+  const trace = await client.request({
+    method: 'debug_traceTransaction',
+    params: [hash, { tracer: 'callTracer' }],
+  })
+  return trace
+}
