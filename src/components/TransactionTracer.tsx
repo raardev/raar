@@ -9,9 +9,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { createPublicClient, formatEther, formatUnits, http } from 'viem'
 import { mainnet } from 'viem/chains'
-import ActionsList from './ActionsList'
-import CallTraceTree from './CallTraceTree'
-import ChangesList from './ChangesList'
+import CallTraceVisualization from './CallTraceVisualization'
 import TransactionForm from './TransactionForm'
 import TransactionInfoCard from './TransactionInfoCard'
 
@@ -121,6 +119,18 @@ const TransactionTracer: React.FC = () => {
     return actions
   }
 
+  const fetchCallTraceData = async (client: PublicClient, hash: string) => {
+    try {
+      const trace = await fetchCallTrace(client, hash)
+      return trace
+    } catch (error) {
+      console.error('Error fetching call trace:', error)
+      throw new Error(
+        `Unable to fetch call trace: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
+  }
+
   const traceTransaction = async (hash: string) => {
     if (!hash) {
       toast.error('Please enter a transaction hash')
@@ -137,12 +147,11 @@ const TransactionTracer: React.FC = () => {
         transport: http(customRPC || undefined),
       })
 
-      const transaction = await client.getTransaction({
-        hash: hash as `0x${string}`,
-      })
-      const receipt = await client.getTransactionReceipt({
-        hash: hash as `0x${string}`,
-      })
+      const [transaction, receipt, trace] = await Promise.all([
+        client.getTransaction({ hash: hash as `0x${string}` }),
+        client.getTransactionReceipt({ hash: hash as `0x${string}` }),
+        fetchCallTraceData(client, hash),
+      ])
 
       setTransactionInfo(formatTransactionInfo(transaction))
       const changes = await fetchValueChanges(client, transaction, receipt)
@@ -151,20 +160,16 @@ const TransactionTracer: React.FC = () => {
       const parsedActions = parseActions(transaction, receipt)
       setActions(parsedActions)
 
-      try {
-        const trace = await fetchCallTrace(client, hash)
-        setCallTrace(trace)
-      } catch (error) {
-        console.error('Error fetching call trace:', error)
-        setCallTraceError(
-          `Unable to fetch call trace: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        )
-      }
+      setCallTrace(trace)
     } catch (error) {
       console.error('Error tracing transaction:', error)
-      toast.error(
-        'Error tracing transaction. Please check the transaction hash and try again.',
-      )
+      if (error.message.includes('Unable to fetch call trace')) {
+        setCallTraceError(error.message)
+      } else {
+        toast.error(
+          'Error tracing transaction. Please check the transaction hash and try again.',
+        )
+      }
     } finally {
       setIsLoading(false)
     }
@@ -196,39 +201,17 @@ const TransactionTracer: React.FC = () => {
         {transactionInfo && (
           <TransactionInfoCard transactionInfo={transactionInfo} />
         )}
-        <ActionsList title="Actions" actions={actions} />
-        <ChangesList title="Value Changes" changes={valueChanges} />
         {(isLoading || callTrace || callTraceError) && (
-          <div className="p-4 rounded-lg">
-            <h3 className="text-lg font-semibold mb-2">Call Trace</h3>
+          <div>
             {isLoading ? (
               <Skeleton className="h-40 w-full" />
             ) : callTraceError ? (
               <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg
-                      className="h-5 w-5 text-yellow-500"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium">
-                      Error fetching call trace
-                    </p>
-                    <p className="text-xs mt-1">{callTraceError}</p>
-                  </div>
-                </div>
+                <p className="font-medium">Error fetching call trace</p>
+                <p className="text-sm mt-1">{callTraceError}</p>
               </div>
             ) : callTrace ? (
-              <CallTraceTree trace={callTrace} />
+              <CallTraceVisualization trace={callTrace} />
             ) : null}
           </div>
         )}
