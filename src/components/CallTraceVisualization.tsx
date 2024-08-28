@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import type { ABIFunction } from 'node_modules/@shazow/whatsabi/lib.types/abi'
 import type React from 'react'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPublicClient, decodeFunctionData, formatEther, http } from 'viem'
 
 interface CallTraceNode {
@@ -30,6 +30,7 @@ const CallTraceVisualization: React.FC<CallTraceVisualizationProps> = ({
 }) => {
   const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(new Set())
   const { customRPC } = useTransactionTracerStore()
+  const [chainId, setChainId] = useState<number | null>(null)
 
   const client = useMemo(() => {
     if (!customRPC) {
@@ -37,10 +38,25 @@ const CallTraceVisualization: React.FC<CallTraceVisualizationProps> = ({
       return
     }
 
-    createPublicClient({
+    return createPublicClient({
       transport: http(customRPC),
     })
   }, [customRPC])
+
+  useEffect(() => {
+    const fetchChainId = async () => {
+      if (client) {
+        try {
+          const id = await client.getChainId()
+          setChainId(id)
+        } catch (error) {
+          console.error('Error fetching chain ID:', error)
+        }
+      }
+    }
+
+    fetchChainId()
+  }, [client])
 
   const getAllAddresses = useCallback((node: CallTraceNode): Set<string> => {
     const addresses = new Set<string>([node.to])
@@ -62,17 +78,19 @@ const CallTraceVisualization: React.FC<CallTraceVisualizationProps> = ({
   const loader = useMemo(
     () =>
       new loaders.MultiABILoader([
-        new loaders.SourcifyABILoader(),
+        new loaders.SourcifyABILoader({
+          chainId: chainId || undefined,
+        }),
         // new loaders.EtherscanABILoader(
         //   {
         //   apiKey: process.env.ETHERSCAN_API_KEY,
         // }),
       ]),
-    [],
+    [chainId],
   )
 
   const { data: decodedFunctions, isLoading } = useQuery({
-    queryKey: ['decodedFunctions', Array.from(addresses), customRPC],
+    queryKey: ['decodedFunctions', Array.from(addresses), customRPC, chainId],
     queryFn: async () => {
       const results: { [address: string]: AutoloadResult['abi'] } = {}
       for (const address of addresses) {
@@ -80,6 +98,7 @@ const CallTraceVisualization: React.FC<CallTraceVisualizationProps> = ({
           const result = await whatsabi.autoload(address as `0x${string}`, {
             provider: client,
             followProxies: true,
+            abiLoader: loader,
             onProgress: (phase) => console.log('autoload progress', phase),
             onError: (phase, context) =>
               console.error('autoload error', phase, context),
@@ -92,10 +111,11 @@ const CallTraceVisualization: React.FC<CallTraceVisualizationProps> = ({
       }
       return results
     },
+    enabled: !!chainId && !!client,
   })
 
   const { data: contractInfo, isLoading: isLoadingContract } = useQuery({
-    queryKey: ['contractInfo', Array.from(addresses)],
+    queryKey: ['contractInfo', Array.from(addresses), chainId],
     queryFn: async () => {
       const results: { [address: string]: { abi: any[]; name: string } } = {}
       for (const address of addresses) {
@@ -112,6 +132,7 @@ const CallTraceVisualization: React.FC<CallTraceVisualizationProps> = ({
       }
       return results
     },
+    enabled: !!chainId,
   })
 
   const decodeFunctionCall = useCallback(
@@ -130,7 +151,7 @@ const CallTraceVisualization: React.FC<CallTraceVisualizationProps> = ({
             item.name === decodedInputs.functionName,
         ) as ABIFunction
 
-        let decodedArgs: { [key: string]: any } = {}
+        let decodedArgs: { [key: string]: unknown } = {}
         if (matchingFunction?.inputs && decodedInputs.args) {
           decodedArgs = matchingFunction.inputs.reduce(
             (acc, input, index) => {
@@ -138,7 +159,7 @@ const CallTraceVisualization: React.FC<CallTraceVisualizationProps> = ({
               acc[input.name || `arg${index}`] = argValue
               return acc
             },
-            {} as { [key: string]: any },
+            {} as { [key: string]: unknown },
           )
         }
 
@@ -212,7 +233,7 @@ const CallTraceVisualization: React.FC<CallTraceVisualizationProps> = ({
           ? `ETH ${formatEther(BigInt(node.value || '0'))} `
           : ''
 
-      const formatArgValue = (value: any): string => {
+      const formatArgValue = (value: unknown): string => {
         if (typeof value === 'bigint') {
           return value.toString()
         }
@@ -283,7 +304,6 @@ const CallTraceVisualization: React.FC<CallTraceVisualizationProps> = ({
       decodedFunctions,
       decodeFunctionCall,
       toggleNode,
-      colorMap,
     ],
   )
 
