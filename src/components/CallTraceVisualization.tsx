@@ -28,9 +28,7 @@ interface CallTraceVisualizationProps {
 const CallTraceVisualization: React.FC<CallTraceVisualizationProps> = ({
   trace,
 }) => {
-  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(
-    new Set(['root']),
-  )
+  const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(new Set())
 
   const client = createPublicClient({ chain: mainnet, transport: http() })
 
@@ -108,7 +106,6 @@ const CallTraceVisualization: React.FC<CallTraceVisualizationProps> = ({
 
   const decodeFunctionCall = useCallback(
     (abi: AutoloadResult['abi'], input: string, output: string) => {
-      console.log('[decodeFunctionCall]abi', abi)
       const selector = input.slice(0, 10)
 
       try {
@@ -117,47 +114,46 @@ const CallTraceVisualization: React.FC<CallTraceVisualizationProps> = ({
           data: input as `0x${string}`,
         })
 
-        console.log('[decodeFunctionCall]decodedInputs', decodedInputs)
-
         const matchingFunction = abi.find(
           (item) =>
             item.type === 'function' &&
             item.name === decodedInputs.functionName,
         ) as ABIFunction
 
-        console.log('[decodeFunctionCall]matchingFunction', matchingFunction)
-
-        let decodedArgs = 'unknown'
+        let decodedArgs: { [key: string]: any } = {}
         if (matchingFunction?.inputs && decodedInputs.args) {
-          decodedArgs = matchingFunction.inputs
-            .map((input, index) => {
+          decodedArgs = matchingFunction.inputs.reduce(
+            (acc, input, index) => {
               const argValue = decodedInputs.args?.[index]
-              let truncatedValue = argValue
-              if (typeof argValue === 'string' && argValue.length > 68) {
-                truncatedValue = `${argValue.slice(0, 64)}...${argValue.slice(-4)}`
-              }
-              return input.name
-                ? `${input.name}=${truncatedValue}`
-                : `${truncatedValue}`
-            })
-            .join(', ')
+              acc[input.name || `arg${index}`] = argValue
+              return acc
+            },
+            {} as { [key: string]: any },
+          )
         }
 
-        const decodedOutputs = output ? `${output}` : ''
-        return `${decodedInputs.functionName}(${decodedArgs}) => (${decodedOutputs})`
+        return {
+          functionName: decodedInputs.functionName,
+          args: decodedArgs,
+          output: output || '',
+        }
       } catch (error) {
         console.error('Error decoding function inputs:', error)
         // Fallback to displaying raw input if decoding fails
         const callData = input.slice(10)
         const truncatedCallData = `${callData.slice(0, 64)}...${callData.slice(-4)}`
-        return `${selector}(call_data=${truncatedCallData}) => (${output || 'void'})`
+        return {
+          functionName: selector,
+          args: { call_data: truncatedCallData },
+          output: output || '',
+        }
       }
     },
     [],
   )
 
   const toggleNode = useCallback((nodeId: string) => {
-    setExpandedNodes((prev) => {
+    setCollapsedNodes((prev) => {
       const newSet = new Set(prev)
       if (newSet.has(nodeId)) {
         newSet.delete(nodeId)
@@ -180,17 +176,19 @@ const CallTraceVisualization: React.FC<CallTraceVisualizationProps> = ({
     ethValue: 'text-yellow-600',
     contractName: 'text-indigo-600',
     functionName: 'text-pink-600',
-    args: 'text-cyan-600',
+    argName: 'text-cyan-600',
+    argValue: 'text-emerald-600',
     output: 'text-teal-600',
   }
 
   const renderNode = useCallback(
     (node: CallTraceNode, nodeId: string, depth: number) => {
-      const isExpanded = expandedNodes.has(nodeId)
+      const isCollapsed = collapsedNodes.has(nodeId)
       const hasChildren = node.calls && node.calls.length > 0
       const gasUsed = Number.parseInt(node.gasUsed, 16)
       const abi = decodedFunctions?.[node.to] || []
       const decodedCall = decodeFunctionCall(abi, node.input, node.output || '')
+
       const { abi: contractAbi, name: contractName } = contractInfo?.[
         node.to
       ] || { abi: [], name: node.to }
@@ -201,8 +199,16 @@ const CallTraceVisualization: React.FC<CallTraceVisualizationProps> = ({
       const callTypeStr = `[${callType.toUpperCase()}] `
       const ethValue =
         node.value !== '0x0' ? `ETH ${formatEther(BigInt(node.value))} ` : ''
-      const [functionName, args] = decodedCall.split('(')
-      const [inputArgs, outputArgs] = args.split(') => (')
+
+      const formatArgValue = (value: any): string => {
+        if (typeof value === 'bigint') {
+          return value.toString()
+        }
+        if (typeof value === 'string' && value.length > 68) {
+          return `${value.slice(0, 64)}...${value.slice(-4)}`
+        }
+        return String(value)
+      }
 
       return (
         <div key={nodeId} className="py-1">
@@ -213,10 +219,10 @@ const CallTraceVisualization: React.FC<CallTraceVisualizationProps> = ({
                 className="focus:outline-none"
                 type="button"
               >
-                {isExpanded ? (
-                  <ChevronDown className="w-3 h-3 text-gray-500" />
-                ) : (
+                {isCollapsed ? (
                   <ChevronRight className="w-3 h-3 text-gray-500" />
+                ) : (
+                  <ChevronDown className="w-3 h-3 text-gray-500" />
                 )}
               </button>
             )}
@@ -226,14 +232,30 @@ const CallTraceVisualization: React.FC<CallTraceVisualizationProps> = ({
               <span className={colorMap.gasUsed}>[{gasUsed}]: </span>
               <span className={colorMap.ethValue}>{ethValue}</span>
               <span className={colorMap.contractName}>({contractName}).</span>
-              <span className={colorMap.functionName}>{functionName}</span>
+              <span className={colorMap.functionName}>
+                {decodedCall.functionName}
+              </span>
               <span>(</span>
-              <span className={colorMap.args}>{inputArgs}</span>
+              <span>
+                {Object.entries(decodedCall.args).map(
+                  ([key, value], index, arr) => (
+                    <span key={key}>
+                      <span className={colorMap.argName}>{key}</span>
+                      <span>=</span>
+                      <span className={colorMap.argValue}>
+                        {formatArgValue(value)}
+                      </span>
+                      {index < arr.length - 1 && <span>, </span>}
+                    </span>
+                  ),
+                )}
+              </span>
               <span>{') => ('}</span>
-              <span className={colorMap.output}>{outputArgs}</span>
+              <span className={colorMap.output}>{decodedCall.output}</span>
+              <span>)</span>
             </div>
           </div>
-          {isExpanded && hasChildren && (
+          {!isCollapsed && hasChildren && (
             <div className="border-l border-gray-300 ml-1 pl-1 mt-1">
               {node.calls?.map((childNode, index) =>
                 renderNode(childNode, `${nodeId}-${index}`, depth + 1),
@@ -244,7 +266,7 @@ const CallTraceVisualization: React.FC<CallTraceVisualizationProps> = ({
       )
     },
     [
-      expandedNodes,
+      collapsedNodes,
       contractInfo,
       decodedFunctions,
       decodeFunctionCall,
