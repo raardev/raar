@@ -111,7 +111,7 @@ function App() {
                 )}
                 {activeTab === 'transactionTracer' && <TransactionTracer />}
               </div>
-              <Toaster />
+              <Toaster richColors />
             </div>
           </TooltipProvider>
         </ConnectKitProvider>

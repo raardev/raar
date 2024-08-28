@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { ValueChange } from '@/types/transaction'
-import { Coins, Banknote, Image, Package } from 'lucide-react'
+import { Banknote, Coins, Image, Package } from 'lucide-react'
 import { useState } from 'react'
 
 interface ChangesListProps {
@@ -35,7 +35,7 @@ const ChangesList: React.FC<ChangesListProps> = ({ title, changes }) => {
       case 'eth':
         return 'ETH'
       case 'token':
-        return 'Token'
+        return 'ERC20'
       case 'nft':
         return 'NFT (ERC721)'
       case 'erc1155':
@@ -57,8 +57,10 @@ const ChangesList: React.FC<ChangesListProps> = ({ title, changes }) => {
           <ul className="space-y-2 text-sm whitespace-nowrap">
             {changes.map((change, index) => (
               <li key={index} className="flex items-center gap-2">
-                {getTypeIcon(change.type)}
-                <span className="font-medium">{getTypeName(change.type)}:</span>
+                {/* {getTypeIcon(change.type)} */}
+                <span className="font-medium text-gray-500">
+                  [{getTypeName(change.type)}]
+                </span>
                 <span
                   className={`cursor-pointer ${
                     selectedAddress === change.address ? 'bg-yellow-200' : ''
@@ -78,20 +80,31 @@ const ChangesList: React.FC<ChangesListProps> = ({ title, changes }) => {
                 {change.description && (
                   <span className="text-gray-500">({change.description})</span>
                 )}
-                {(change.type === 'token' || change.type === 'nft' || change.type === 'erc1155') && (
+                {(change.type === 'token' ||
+                  change.type === 'nft' ||
+                  change.type === 'erc1155') && (
                   <>
                     <span className="text-gray-500">Contract:</span>
                     <span
                       className={`cursor-pointer ${
-                        selectedAddress === (change.type === 'token' ? change.token : change.contractAddress)
+                        selectedAddress ===
+                        (change.type === 'token'
+                          ? change.token
+                          : change.contractAddress)
                           ? 'bg-yellow-200'
                           : ''
                       }`}
                       onClick={() =>
-                        handleAddressClick(change.type === 'token' ? change.token : change.contractAddress)
+                        handleAddressClick(
+                          change.type === 'token'
+                            ? change.token
+                            : change.contractAddress,
+                        )
                       }
                     >
-                      {change.type === 'token' ? change.token : change.contractAddress}
+                      {change.type === 'token'
+                        ? change.token
+                        : change.contractAddress}
                     </span>
                   </>
                 )}

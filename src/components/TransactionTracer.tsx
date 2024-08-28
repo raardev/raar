@@ -1,31 +1,40 @@
 import { Skeleton } from '@/components/ui/skeleton'
-import type { Action, TransactionInfo, ValueChange } from '@/types/transaction'
+import { useTransactionTracerStore } from '@/stores/transactionTracerStore'
+import type { Action } from '@/types/transaction'
 import {
   fetchCallTrace,
   fetchValueChanges,
   formatTransactionInfo,
 } from '@/utils/transactionUtils'
-import { useState } from 'react'
 import { toast } from 'sonner'
+import type { PublicClient } from 'viem'
 import { createPublicClient, formatEther, formatUnits, http } from 'viem'
 import { mainnet } from 'viem/chains'
+import ActionsList from './ActionsList'
 import CallTraceVisualization from './CallTraceVisualization'
+import ChangesList from './ChangesList'
 import TransactionForm from './TransactionForm'
 import TransactionInfoCard from './TransactionInfoCard'
 
 const TransactionTracer: React.FC = () => {
-  const [txHash, setTxHash] = useState('')
-  const [transactionInfo, setTransactionInfo] =
-    useState<TransactionInfo | null>(null)
-  const [valueChanges, setValueChanges] = useState<ValueChange[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [actions, setActions] = useState<Action[]>([])
-  const [callTrace, setCallTrace] = useState<any>(null)
-  const [callTraceError, setCallTraceError] = useState<string | null>(null)
-  const [customRPC, setCustomRPC] = useState('')
-
-  const demoTxHash =
-    '0x1a62fa4fba30fa68e9ecf4606eda41ccefd12eee297b4123a6743fae8dac0cd8'
+  const {
+    txHash,
+    transactionInfo,
+    valueChanges,
+    actions,
+    callTrace,
+    callTraceError,
+    customRPC,
+    isLoading,
+    setTxHash,
+    setTransactionInfo,
+    setValueChanges,
+    setActions,
+    setCallTrace,
+    setCallTraceError,
+    setCustomRPC,
+    setIsLoading,
+  } = useTransactionTracerStore()
 
   const parseActions = (transaction: any, receipt: any): Action[] => {
     const actions: Action[] = []
@@ -175,13 +184,7 @@ const TransactionTracer: React.FC = () => {
     }
   }
 
-  const handleDemoClick = () => {
-    setTxHash(demoTxHash)
-    traceTransaction(demoTxHash)
-  }
-
   const handleRPCChange = (newRPC: string) => {
-    console.log('newRPC', newRPC)
     setCustomRPC(newRPC)
   }
 
@@ -193,28 +196,39 @@ const TransactionTracer: React.FC = () => {
           txHash={txHash}
           onTxHashChange={setTxHash}
           onTrace={traceTransaction}
-          onDemoClick={handleDemoClick}
           isLoading={isLoading}
           customRPC={customRPC}
           onRPCChange={handleRPCChange}
         />
-        {transactionInfo && (
+
+        {isLoading ? (
+          <Skeleton className="h-40 w-full" />
+        ) : transactionInfo ? (
           <TransactionInfoCard transactionInfo={transactionInfo} />
-        )}
-        {(isLoading || callTrace || callTraceError) && (
-          <div>
-            {isLoading ? (
-              <Skeleton className="h-40 w-full" />
-            ) : callTraceError ? (
-              <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded">
-                <p className="font-medium">Error fetching call trace</p>
-                <p className="text-sm mt-1">{callTraceError}</p>
-              </div>
-            ) : callTrace ? (
-              <CallTraceVisualization trace={callTrace} />
-            ) : null}
+        ) : null}
+
+        {isLoading ? (
+          <Skeleton className="h-40 w-full" />
+        ) : valueChanges.length > 0 ? (
+          <ChangesList title="Value Changes" changes={valueChanges} />
+        ) : null}
+
+        {isLoading ? (
+          <Skeleton className="h-40 w-full" />
+        ) : actions.length > 0 ? (
+          <ActionsList title="Actions" actions={actions} />
+        ) : null}
+
+        {isLoading ? (
+          <Skeleton className="h-40 w-full" />
+        ) : callTraceError ? (
+          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded">
+            <p className="font-medium">Error fetching call trace</p>
+            <p className="text-sm mt-1">{callTraceError}</p>
           </div>
-        )}
+        ) : callTrace ? (
+          <CallTraceVisualization trace={callTrace} />
+        ) : null}
       </div>
     </div>
   )

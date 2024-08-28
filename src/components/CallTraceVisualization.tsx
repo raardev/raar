@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useTransactionTracerStore } from '@/stores/transactionTracerStore'
 import { type AutoloadResult, loaders, whatsabi } from '@shazow/whatsabi'
 import { useQuery } from '@tanstack/react-query'
 import { ChevronDown, ChevronRight } from 'lucide-react'
@@ -6,7 +7,6 @@ import type { ABIFunction } from 'node_modules/@shazow/whatsabi/lib.types/abi'
 import type React from 'react'
 import { useCallback, useMemo, useState } from 'react'
 import { createPublicClient, decodeFunctionData, formatEther, http } from 'viem'
-import { mainnet } from 'viem/chains'
 
 interface CallTraceNode {
   type: string
@@ -29,8 +29,15 @@ const CallTraceVisualization: React.FC<CallTraceVisualizationProps> = ({
   trace,
 }) => {
   const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(new Set())
+  const { customRPC } = useTransactionTracerStore()
 
-  const client = createPublicClient({ chain: mainnet, transport: http() })
+  const client = useMemo(
+    () =>
+      createPublicClient({
+        transport: http(customRPC || undefined),
+      }),
+    [customRPC],
+  )
 
   const getAllAddresses = useCallback((node: CallTraceNode): Set<string> => {
     const addresses = new Set<string>([node.to])
@@ -62,7 +69,7 @@ const CallTraceVisualization: React.FC<CallTraceVisualizationProps> = ({
   )
 
   const { data: decodedFunctions, isLoading } = useQuery({
-    queryKey: ['decodedFunctions', Array.from(addresses)],
+    queryKey: ['decodedFunctions', Array.from(addresses), customRPC],
     queryFn: async () => {
       const results: { [address: string]: AutoloadResult['abi'] } = {}
       for (const address of addresses) {
@@ -198,7 +205,9 @@ const CallTraceVisualization: React.FC<CallTraceVisualizationProps> = ({
         'text-gray-600 font-semibold'
       const callTypeStr = `[${callType.toUpperCase()}] `
       const ethValue =
-        node.value !== '0x0' ? `ETH ${formatEther(BigInt(node.value))} ` : ''
+        node.value !== '0x0'
+          ? `ETH ${formatEther(BigInt(node.value || '0'))} `
+          : ''
 
       const formatArgValue = (value: any): string => {
         if (typeof value === 'bigint') {
@@ -256,7 +265,7 @@ const CallTraceVisualization: React.FC<CallTraceVisualizationProps> = ({
             </div>
           </div>
           {!isCollapsed && hasChildren && (
-            <div className="border-l border-gray-300 ml-1 pl-1 mt-1">
+            <div className="border-l border-gray-300 ml-1 pl-2 mt-1">
               {node.calls?.map((childNode, index) =>
                 renderNode(childNode, `${nodeId}-${index}`, depth + 1),
               )}

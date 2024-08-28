@@ -34,6 +34,10 @@ const Sidebar: React.FC<SidebarProps> = ({
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
+  const handleLogoDoubleClick = () => {
+    setIsCollapsed(!isCollapsed)
+  }
+
   return (
     <div
       className={cn(
@@ -51,7 +55,10 @@ const Sidebar: React.FC<SidebarProps> = ({
             <PanelLeftIcon size={24} />
           </Button>
         ) : (
-          <>
+          <div
+            onDoubleClick={handleLogoDoubleClick}
+            className="flex items-center cursor-pointer"
+          >
             <img
               src="/logo.svg"
               alt="RaaR"
@@ -60,7 +67,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               className="mr-2"
             />
             <h1 className="text-2xl font-bold">RaaR</h1>
-          </>
+          </div>
         )}
       </div>
 

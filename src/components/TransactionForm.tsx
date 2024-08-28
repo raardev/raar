@@ -8,7 +8,6 @@ interface TransactionFormProps {
   txHash: string
   onTxHashChange: (hash: string) => void
   onTrace: (hash: string) => void
-  onDemoClick: () => void
   isLoading: boolean
   customRPC: string
   onRPCChange: (rpc: string) => void
@@ -18,7 +17,6 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
   txHash,
   onTxHashChange,
   onTrace,
-  onDemoClick,
   isLoading,
   customRPC,
   onRPCChange,
@@ -135,9 +133,6 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
           />
           <Button type="submit" disabled={isLoading} className="w-24">
             {isLoading ? 'Tracing...' : 'Trace'}
-          </Button>
-          <Button onClick={onDemoClick} variant="outline" className="w-24">
-            Demo
           </Button>
         </div>
       </div>
