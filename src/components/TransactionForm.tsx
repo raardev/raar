@@ -3,6 +3,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { chains } from '@/config/chains'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
 
 interface TransactionFormProps {
   txHash: string
@@ -75,6 +76,10 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (!customRPC) {
+      toast.error('Please enter a valid RPC URL')
+      return
+    }
     onTrace(txHash)
   }
 

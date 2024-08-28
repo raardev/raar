@@ -1,6 +1,7 @@
 import { Skeleton } from '@/components/ui/skeleton'
 import { useTransactionTracerStore } from '@/stores/transactionTracerStore'
 import type { Action } from '@/types/transaction'
+import { fetchTokenInfo } from '@/utils/tokenUtils'
 import {
   fetchCallTrace,
   fetchValueChanges,
@@ -146,6 +147,11 @@ const TransactionTracer: React.FC = () => {
       return
     }
 
+    if (!customRPC) {
+      toast.error('Please enter a valid RPC URL')
+      return
+    }
+
     setIsLoading(true)
     setCallTrace(null)
     setCallTraceError(null)
@@ -153,7 +159,7 @@ const TransactionTracer: React.FC = () => {
     try {
       const client = createPublicClient({
         chain: mainnet,
-        transport: http(customRPC || undefined),
+        transport: http(customRPC),
       })
 
       const [transaction, receipt, trace] = await Promise.all([
@@ -169,11 +175,43 @@ const TransactionTracer: React.FC = () => {
       const parsedActions = parseActions(transaction, receipt)
       setActions(parsedActions)
 
+      // Fetch token info for all unique token addresses
+      const uniqueTokenAddresses = new Set([
+        ...changes.filter((c) => c.type === 'token').map((c) => c.token),
+        ...parsedActions.filter((a) => a.token !== 'ETH').map((a) => a.token),
+      ])
+
+      const tokenInfoPromises = Array.from(uniqueTokenAddresses).map(
+        (address) => fetchTokenInfo(client, address as string),
+      )
+      const tokenInfoResults = await Promise.all(tokenInfoPromises)
+
+      const tokenInfoMap = Object.fromEntries(
+        tokenInfoResults.map((info) => [info.address, info]),
+      )
+
+      // Update changes and actions with token info
+      const updatedChanges = changes.map((change) => ({
+        ...change,
+        tokenInfo:
+          change.type === 'token' ? tokenInfoMap[change.token] : undefined,
+      }))
+      setValueChanges(updatedChanges)
+
+      const updatedActions = parsedActions.map((action) => ({
+        ...action,
+        tokenInfo:
+          action.token !== 'ETH' ? tokenInfoMap[action.token] : undefined,
+      }))
+      setActions(updatedActions)
+
       setCallTrace(trace)
     } catch (error) {
       console.error('Error tracing transaction:', error)
       if (error.message.includes('Unable to fetch call trace')) {
         setCallTraceError(error.message)
+      } else if (error.message.includes('No URL was provided')) {
+        toast.error('Invalid RPC URL. Please check your RPC URL and try again.')
       } else {
         toast.error(
           'Error tracing transaction. Please check the transaction hash and try again.',

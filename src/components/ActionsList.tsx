@@ -1,9 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import type { TokenInfo } from '@/types/token' // Add this import
 import type { Action } from '@/types/transaction'
+
+interface ActionWithTokenInfo extends Action {
+  tokenInfo?: TokenInfo
+}
 
 interface ActionsListProps {
   title: string
-  actions: Action[]
+  actions: ActionWithTokenInfo[]
 }
 
 const ActionsList: React.FC<ActionsListProps> = ({ title, actions }) => {
@@ -30,24 +35,20 @@ const ActionsList: React.FC<ActionsListProps> = ({ title, actions }) => {
               <span className="text-foreground">[{action.type}]</span>
               <span>
                 amount=
-                <span className="text-foreground font-medium">
-                  {action.amount}
-                </span>
+                <span className="text-foreground">{action.amount}</span>
               </span>
-              <span className="text-foreground font-medium">
-                [{action.token}]
+              <span className="font-medium">
+                {action.token === 'ETH'
+                  ? 'ETH'
+                  : action.tokenInfo?.symbol || action.tokenInfo?.address}
               </span>
               <span>
                 from=
-                <span className="text-foreground font-medium">
-                  {shortenAddress(action.from)}
-                </span>
+                <span className="text-foreground">{action.from}</span>
               </span>
               <span>
                 to=
-                <span className="text-foreground font-medium">
-                  {shortenAddress(action.to)}
-                </span>
+                <span className="text-foreground">{action.to}</span>
               </span>
               {action.operator && (
                 <span>

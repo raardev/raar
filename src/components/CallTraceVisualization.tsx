@@ -31,13 +31,16 @@ const CallTraceVisualization: React.FC<CallTraceVisualizationProps> = ({
   const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(new Set())
   const { customRPC } = useTransactionTracerStore()
 
-  const client = useMemo(
-    () =>
-      createPublicClient({
-        transport: http(customRPC || undefined),
-      }),
-    [customRPC],
-  )
+  const client = useMemo(() => {
+    if (!customRPC) {
+      // toast.error('Please enter a valid RPC URL')
+      return
+    }
+
+    createPublicClient({
+      transport: http(customRPC),
+    })
+  }, [customRPC])
 
   const getAllAddresses = useCallback((node: CallTraceNode): Set<string> => {
     const addresses = new Set<string>([node.to])

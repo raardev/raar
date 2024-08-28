@@ -1,11 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import type { TokenInfo } from '@/types/token'
 import type { ValueChange } from '@/types/transaction'
-import { Banknote, Coins, Image, Package } from 'lucide-react'
 import { useState } from 'react'
+
+interface ValueChangeWithTokenInfo extends ValueChange {
+  tokenInfo?: TokenInfo
+}
 
 interface ChangesListProps {
   title: string
-  changes: ValueChange[]
+  changes: ValueChangeWithTokenInfo[]
 }
 
 const ChangesList: React.FC<ChangesListProps> = ({ title, changes }) => {
@@ -15,19 +19,6 @@ const ChangesList: React.FC<ChangesListProps> = ({ title, changes }) => {
 
   const getChangeColor = (amount: string) => {
     return amount.startsWith('-') ? 'text-red-500' : 'text-green-500'
-  }
-
-  const getTypeIcon = (type: ValueChange['type']) => {
-    switch (type) {
-      case 'eth':
-        return <Coins className="w-4 h-4 text-blue-500" />
-      case 'token':
-        return <Banknote className="w-4 h-4 text-green-500" />
-      case 'nft':
-        return <Image className="w-4 h-4 text-purple-500" />
-      case 'erc1155':
-        return <Package className="w-4 h-4 text-orange-500" />
-    }
   }
 
   const getTypeName = (type: ValueChange['type']) => {
@@ -54,66 +45,70 @@ const ChangesList: React.FC<ChangesListProps> = ({ title, changes }) => {
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
-          <ul className="space-y-2 text-sm whitespace-nowrap">
-            {changes.map((change, index) => (
-              <li key={index} className="flex items-center gap-2">
-                {/* {getTypeIcon(change.type)} */}
-                <span className="font-medium text-gray-500">
-                  [{getTypeName(change.type)}]
-                </span>
-                <span
-                  className={`cursor-pointer ${
-                    selectedAddress === change.address ? 'bg-yellow-200' : ''
-                  }`}
-                  onClick={() => handleAddressClick(change.address)}
+          <table className="w-full text-sm">
+            <tbody>
+              {changes.map((change, index) => (
+                <tr
+                  key={change.address + index}
+                  className="border-b border-gray-200"
                 >
-                  {change.address}
-                </span>
-                <span className={getChangeColor(change.amount)}>
-                  {change.amount} {change.type === 'eth' ? 'ETH' : ''}
-                </span>
-                {change.usdValue && (
-                  <span className={getChangeColor(change.usdValue)}>
-                    ({change.usdValue})
-                  </span>
-                )}
-                {change.description && (
-                  <span className="text-gray-500">({change.description})</span>
-                )}
-                {(change.type === 'token' ||
-                  change.type === 'nft' ||
-                  change.type === 'erc1155') && (
-                  <>
-                    <span className="text-gray-500">Contract:</span>
+                  <td className="py-2 pr-4 w-24">
+                    <span className="font-medium text-gray-500">
+                      [{getTypeName(change.type)}]
+                    </span>
+                  </td>
+                  <td className="py-2 pr-4 w-44">
                     <span
                       className={`cursor-pointer ${
-                        selectedAddress ===
-                        (change.type === 'token'
-                          ? change.token
-                          : change.contractAddress)
+                        selectedAddress === change.address
                           ? 'bg-yellow-200'
                           : ''
                       }`}
-                      onClick={() =>
-                        handleAddressClick(
-                          change.type === 'token'
-                            ? change.token
-                            : change.contractAddress,
-                        )
-                      }
+                      onClick={() => handleAddressClick(change.address)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          handleAddressClick(change.address)
+                        }
+                      }}
+                      tabIndex={0}
+                      role="button"
                     >
-                      {change.type === 'token'
-                        ? change.token
-                        : change.contractAddress}
+                      {change.address}
                     </span>
-                  </>
-                )}
-                {(change.type === 'nft' || change.type === 'erc1155') && (
-                  <span className="text-gray-500">ID: {change.tokenId}</span>
-                )}
-              </li>
-            ))}
-          </ul>
+                  </td>
+                  <td className="py-2 pr-4">
+                    <span className={getChangeColor(change.amount)}>
+                      {change.amount}
+                    </span>{' '}
+                    <span className="text-gray-500">
+                      {change.type === 'eth'
+                        ? 'ETH'
+                        : change.tokenInfo?.symbol || ''}
+                    </span>
+                    {change.usdValue && (
+                      <span
+                        className={`ml-2 ${getChangeColor(change.usdValue)}`}
+                      >
+                        ({change.usdValue})
+                      </span>
+                    )}
+                    {change.description && (
+                      <span className="ml-2 text-gray-500">
+                        ({change.description})
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-2">
+                    {(change.type === 'nft' || change.type === 'erc1155') && (
+                      <span className="text-gray-500">
+                        ID: {change.tokenId}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </CardContent>
     </Card>
