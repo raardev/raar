@@ -235,9 +235,9 @@ const WalletGenerator: React.FC = () => {
             No wallets generated yet. Use the form above to create some.
           </p>
         ) : (
-          <div className="space-y-2 max-h-96 overflow-y-auto">
+          <div className="space-y-2 overflow-y-auto max-h-[450px] pr-2">
             {wallets.map((wallet, index) => (
-              <Card key={index}>
+              <Card key={wallet.address}>
                 <CardContent className="p-4 flex items-start space-x-4">
                   <Checkbox
                     checked={wallet.selected}

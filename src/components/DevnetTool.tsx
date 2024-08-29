@@ -1,6 +1,5 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
@@ -13,6 +12,7 @@ import { invoke } from '@tauri-apps/api/tauri'
 import { Loader2, PlayIcon, StopCircleIcon } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import RPCInput from './RPCInput'
 
 interface DevnetInfo {
   rpc_url: string
@@ -130,12 +130,10 @@ const DevnetTool: React.FC = () => {
       </div>
       {showForkInput && (
         <div className="flex space-x-2">
-          <Input
-            type="text"
+          <RPCInput
             value={forkUrl}
-            onChange={(e) => setForkUrl(e.target.value)}
+            onChange={setForkUrl}
             placeholder="Enter network URL to fork"
-            disabled={isForking}
           />
           <Button onClick={forkNetwork} disabled={!forkUrl || isForking}>
             {isForking ? (

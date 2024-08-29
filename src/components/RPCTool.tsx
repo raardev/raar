@@ -5,7 +5,6 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command'
-import { Input } from '@/components/ui/input'
 import {
   Popover,
   PopoverContent,
@@ -37,6 +36,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import RPCInput from './RPCInput'
 
 interface RPCResponse {
   status?: number
@@ -243,20 +243,12 @@ const RPCTool: React.FC = () => {
         {requests.map((req) => (
           <TabsContent key={req.id} value={req.id} className="space-y-4">
             <div className="flex space-x-2 items-center">
-              <Input
+              <RPCInput
                 value={req.rpcUrl}
-                onChange={(e) => {
-                  const newValue = e.target.value.toLowerCase()
+                onChange={(newValue) =>
                   updateRequest(req.id, { rpcUrl: newValue })
-                }}
-                onBlur={(e) => {
-                  if (!validateUrl(e.target.value)) {
-                    alert('Please enter a valid URL')
-                    updateRequest(req.id, { rpcUrl: '' })
-                  }
-                }}
+                }
                 placeholder="http://localhost:8545"
-                className="flex-grow bg-muted"
               />
               <Button
                 onClick={() => sendRequest(req.id)}
@@ -324,7 +316,9 @@ const RPCTool: React.FC = () => {
                         {filteredMethods.map((rpcMethod) => (
                           <CommandItem
                             key={rpcMethod.method}
-                            onSelect={() => handleMethodChange(req.id, rpcMethod.method)}
+                            onSelect={() =>
+                              handleMethodChange(req.id, rpcMethod.method)
+                            }
                           >
                             <div className="flex items-center justify-between w-full">
                               {rpcMethod.method}
