@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useTransactionTracerStore } from '@/stores/transactionTracerStore'
 import { type AutoloadResult, loaders, whatsabi } from '@shazow/whatsabi'
 import { useQuery } from '@tanstack/react-query'
@@ -89,30 +90,31 @@ const CallTraceVisualization: React.FC<CallTraceVisualizationProps> = ({
     [chainId],
   )
 
-  const { data: decodedFunctions, isLoading } = useQuery({
-    queryKey: ['decodedFunctions', Array.from(addresses), customRPC, chainId],
-    queryFn: async () => {
-      const results: { [address: string]: AutoloadResult['abi'] } = {}
-      for (const address of addresses) {
-        try {
-          const result = await whatsabi.autoload(address as `0x${string}`, {
-            provider: client,
-            followProxies: true,
-            abiLoader: loader,
-            onProgress: (phase) => console.log('autoload progress', phase),
-            onError: (phase, context) =>
-              console.error('autoload error', phase, context),
-          })
-          results[address] = result.abi
-        } catch (error) {
-          console.error('Error fetching ABI:', error)
-          results[address] = []
+  const { data: decodedFunctions, isLoading: isLoadingDecodedFunctions } =
+    useQuery({
+      queryKey: ['decodedFunctions', Array.from(addresses), customRPC, chainId],
+      queryFn: async () => {
+        const results: { [address: string]: AutoloadResult['abi'] } = {}
+        for (const address of addresses) {
+          try {
+            const result = await whatsabi.autoload(address as `0x${string}`, {
+              provider: client,
+              followProxies: true,
+              abiLoader: loader,
+              onProgress: (phase) => console.log('autoload progress', phase),
+              onError: (phase, context) =>
+                console.error('autoload error', phase, context),
+            })
+            results[address] = result.abi
+          } catch (error) {
+            console.error('Error fetching ABI:', error)
+            results[address] = []
+          }
         }
-      }
-      return results
-    },
-    enabled: !!chainId && !!client,
-  })
+        return results
+      },
+      enabled: !!chainId && !!client,
+    })
 
   const { data: contractInfo, isLoading: isLoadingContract } = useQuery({
     queryKey: ['contractInfo', Array.from(addresses), chainId],
@@ -314,9 +316,7 @@ const CallTraceVisualization: React.FC<CallTraceVisualizationProps> = ({
     return null
   }, [decodedFunctions, renderNode, trace])
 
-  if (isLoading || isLoadingContract) {
-    return <div>Loading...</div>
-  }
+  const isLoading = isLoadingDecodedFunctions || isLoadingContract
 
   return (
     <Card>
@@ -324,7 +324,17 @@ const CallTraceVisualization: React.FC<CallTraceVisualizationProps> = ({
         <CardTitle className="text-lg">Transaction Trace</CardTitle>
       </CardHeader>
       <CardContent className="overflow-x-auto">
-        <div className="whitespace-nowrap">{renderedTree}</div>
+        {isLoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-5/6" />
+            <Skeleton className="h-4 w-4/6" />
+            <Skeleton className="h-4 w-3/6" />
+            <Skeleton className="h-4 w-2/6" />
+          </div>
+        ) : (
+          <div className="whitespace-nowrap">{renderedTree}</div>
+        )}
       </CardContent>
     </Card>
   )

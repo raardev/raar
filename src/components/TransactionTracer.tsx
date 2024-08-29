@@ -8,7 +8,7 @@ import {
   formatTransactionInfo,
 } from '@/utils/transactionUtils'
 import { toast } from 'sonner'
-import type { PublicClient } from 'viem'
+import type { PublicClient, Transaction, TransactionReceipt } from 'viem'
 import { createPublicClient, formatEther, formatUnits, http } from 'viem'
 import { mainnet } from 'viem/chains'
 import ActionsList from './ActionsList'
@@ -16,8 +16,6 @@ import CallTraceVisualization from './CallTraceVisualization'
 import ChangesList from './ChangesList'
 import TransactionForm from './TransactionForm'
 import TransactionInfoCard from './TransactionInfoCard'
-import { Button } from './ui/button'
-import { Input } from './ui/input'
 
 const TransactionTracer: React.FC = () => {
   const {
@@ -39,7 +37,10 @@ const TransactionTracer: React.FC = () => {
     setIsLoading,
   } = useTransactionTracerStore()
 
-  const parseActions = (transaction: any, receipt: any): Action[] => {
+  const parseActions = (
+    transaction: Transaction,
+    receipt: TransactionReceipt,
+  ): Action[] => {
     const actions: Action[] = []
 
     // ETH transfer
@@ -115,7 +116,7 @@ const TransactionTracer: React.FC = () => {
           .slice(valuesStart + 2, valuesEnd + 2)
           .match(/.{1,64}/g)
 
-        ids.forEach((id, index) => {
+        ids.forEach((id: string, index: number) => {
           actions.push({
             type: 'transfer',
             amount: BigInt(`0x${values[index]}`).toString(),
@@ -157,6 +158,9 @@ const TransactionTracer: React.FC = () => {
     setIsLoading(true)
     setCallTrace(null)
     setCallTraceError(null)
+    setTransactionInfo(null)
+    setValueChanges([])
+    setActions([])
 
     try {
       const client = createPublicClient({
@@ -164,60 +168,88 @@ const TransactionTracer: React.FC = () => {
         transport: http(customRPC),
       })
 
-      const [transaction, receipt, trace] = await Promise.all([
-        client.getTransaction({ hash: hash as `0x${string}` }),
-        client.getTransactionReceipt({ hash: hash as `0x${string}` }),
-        fetchCallTraceData(client, hash),
-      ])
+      // Fetch transaction info
+      try {
+        const transaction = await client.getTransaction({
+          hash: hash as `0x${string}`,
+        })
+        setTransactionInfo(formatTransactionInfo(transaction))
+      } catch (error) {
+        console.error('Error fetching transaction info:', error)
+        toast.error('Failed to fetch transaction info')
+      }
 
-      setTransactionInfo(formatTransactionInfo(transaction))
-      const changes = await fetchValueChanges(client, transaction, receipt)
-      setValueChanges(changes)
+      // Fetch value changes and actions
+      try {
+        const [transaction, receipt] = await Promise.all([
+          client.getTransaction({ hash: hash as `0x${string}` }),
+          client.getTransactionReceipt({ hash: hash as `0x${string}` }),
+        ])
 
-      const parsedActions = parseActions(transaction, receipt)
-      setActions(parsedActions)
+        const changes = await fetchValueChanges(client, transaction, receipt)
+        const parsedActions = parseActions(transaction, receipt)
 
-      // Fetch token info for all unique token addresses
-      const uniqueTokenAddresses = new Set([
-        ...changes.filter((c) => c.type === 'token').map((c) => c.token),
-        ...parsedActions.filter((a) => a.token !== 'ETH').map((a) => a.token),
-      ])
+        // Fetch token info
+        const uniqueTokenAddresses = new Set([
+          ...changes.filter((c) => c.type === 'token').map((c) => c.token),
+          ...parsedActions.filter((a) => a.token !== 'ETH').map((a) => a.token),
+        ])
 
-      const tokenInfoPromises = Array.from(uniqueTokenAddresses).map(
-        (address) => fetchTokenInfo(client, address as string),
-      )
-      const tokenInfoResults = await Promise.all(tokenInfoPromises)
+        const tokenInfoPromises = Array.from(uniqueTokenAddresses).map(
+          (address) => fetchTokenInfo(client, address as string),
+        )
+        const tokenInfoResults = await Promise.all(tokenInfoPromises)
 
-      const tokenInfoMap = Object.fromEntries(
-        tokenInfoResults.map((info) => [info.address, info]),
-      )
+        const tokenInfoMap = Object.fromEntries(
+          tokenInfoResults.map((info) => [info.address, info]),
+        )
 
-      // Update changes and actions with token info
-      const updatedChanges = changes.map((change) => ({
-        ...change,
-        tokenInfo:
-          change.type === 'token' ? tokenInfoMap[change.token] : undefined,
-      }))
-      setValueChanges(updatedChanges)
+        // Update changes and actions with token info
+        const updatedChanges = changes.map((change) => ({
+          ...change,
+          tokenInfo:
+            change.type === 'token' ? tokenInfoMap[change.token] : undefined,
+        }))
+        setValueChanges(updatedChanges)
 
-      const updatedActions = parsedActions.map((action) => ({
-        ...action,
-        tokenInfo:
-          action.token !== 'ETH' ? tokenInfoMap[action.token] : undefined,
-      }))
-      setActions(updatedActions)
+        const updatedActions = parsedActions.map((action) => ({
+          ...action,
+          tokenInfo:
+            action.token !== 'ETH' ? tokenInfoMap[action.token] : undefined,
+        }))
+        setActions(updatedActions)
+      } catch (error) {
+        console.error('Error fetching value changes and actions:', error)
+        toast.error('Failed to fetch value changes and actions')
+      }
 
-      setCallTrace(trace)
+      // Fetch call trace
+      try {
+        const trace = await fetchCallTraceData(client, hash)
+        setCallTrace(trace)
+      } catch (error) {
+        console.error('Error fetching call trace:', error)
+        if (
+          error instanceof Error &&
+          error.message.includes('Unable to fetch call trace')
+        ) {
+          setCallTraceError(error.message)
+        } else {
+          toast.error('Failed to fetch call trace')
+        }
+      }
     } catch (error) {
       console.error('Error tracing transaction:', error)
-      if (error.message.includes('Unable to fetch call trace')) {
-        setCallTraceError(error.message)
-      } else if (error.message.includes('No URL was provided')) {
-        toast.error('Invalid RPC URL. Please check your RPC URL and try again.')
-      } else {
-        toast.error(
-          'Error tracing transaction. Please check the transaction hash and try again.',
-        )
+      if (error instanceof Error) {
+        if (error.message.includes('No URL was provided')) {
+          toast.error(
+            'Invalid RPC URL. Please check your RPC URL and try again.',
+          )
+        } else {
+          toast.error(
+            'Error tracing transaction. Please check the transaction hash and try again.',
+          )
+        }
       }
     } finally {
       setIsLoading(false)
@@ -230,53 +262,43 @@ const TransactionTracer: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex space-x-2">
-        <Input
-          placeholder="Enter transaction hash"
-          value={txHash}
-          onChange={(e) => setTxHash(e.target.value)}
-        />
-        <Button onClick={traceTransaction}>Trace</Button>
-      </div>
-      <div className="space-y-6">
-        <TransactionForm
-          txHash={txHash}
-          onTxHashChange={setTxHash}
-          onTrace={traceTransaction}
-          isLoading={isLoading}
-          customRPC={customRPC}
-          onRPCChange={handleRPCChange}
-        />
+      <TransactionForm
+        txHash={txHash}
+        onTxHashChange={setTxHash}
+        onTrace={traceTransaction}
+        isLoading={isLoading}
+        customRPC={customRPC}
+        onRPCChange={handleRPCChange}
+      />
 
-        {isLoading ? (
-          <Skeleton className="h-40 w-full" />
-        ) : transactionInfo ? (
-          <TransactionInfoCard transactionInfo={transactionInfo} />
-        ) : null}
+      {isLoading ? (
+        <Skeleton className="h-40 w-full" />
+      ) : transactionInfo ? (
+        <TransactionInfoCard transactionInfo={transactionInfo} />
+      ) : null}
 
-        {isLoading ? (
-          <Skeleton className="h-40 w-full" />
-        ) : valueChanges.length > 0 ? (
-          <ChangesList title="Value Changes" changes={valueChanges} />
-        ) : null}
+      {isLoading ? (
+        <Skeleton className="h-40 w-full" />
+      ) : valueChanges.length > 0 ? (
+        <ChangesList title="Value Changes" changes={valueChanges} />
+      ) : null}
 
-        {isLoading ? (
-          <Skeleton className="h-40 w-full" />
-        ) : actions.length > 0 ? (
-          <ActionsList title="Actions" actions={actions} />
-        ) : null}
+      {isLoading ? (
+        <Skeleton className="h-40 w-full" />
+      ) : actions.length > 0 ? (
+        <ActionsList title="Actions" actions={actions} />
+      ) : null}
 
-        {isLoading ? (
-          <Skeleton className="h-40 w-full" />
-        ) : callTraceError ? (
-          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded">
-            <p className="font-medium">Error fetching call trace</p>
-            <p className="text-sm mt-1">{callTraceError}</p>
-          </div>
-        ) : callTrace ? (
-          <CallTraceVisualization trace={callTrace} />
-        ) : null}
-      </div>
+      {isLoading ? (
+        <Skeleton className="h-40 w-full" />
+      ) : callTraceError ? (
+        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded">
+          <p className="font-medium">Error fetching call trace</p>
+          <p className="text-sm mt-1">{callTraceError}</p>
+        </div>
+      ) : callTrace ? (
+        <CallTraceVisualization trace={callTrace} />
+      ) : null}
     </div>
   )
 }
