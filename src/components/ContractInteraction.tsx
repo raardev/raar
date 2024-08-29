@@ -1,30 +1,36 @@
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { whatsabi } from '@shazow/whatsabi'
 import { ConnectKitButton } from 'connectkit'
+import type { ABIFunction } from 'node_modules/@shazow/whatsabi/lib.types/abi'
 import { useState } from 'react'
 import { createPublicClient, http } from 'viem'
 import { mainnet } from 'viem/chains'
 import { useAccount, useWalletClient } from 'wagmi'
+import RPCInput from './RPCInput'
 
 const ContractInteraction: React.FC = () => {
   const [address, setAddress] = useState('')
-  const [abi, setAbi] = useState<any>(null)
-  const [readFunctions, setReadFunctions] = useState<any[]>([])
-  const [writeFunctions, setWriteFunctions] = useState<any[]>([])
+  const [customRPC, setCustomRPC] = useState('')
+  const [abi, setAbi] = useState<ABIFunction[]>([])
+  const [readFunctions, setReadFunctions] = useState<ABIFunction[]>([])
+  const [writeFunctions, setWriteFunctions] = useState<ABIFunction[]>([])
   const [resolvedAddress, setResolvedAddress] = useState('')
   const [functionInputs, setFunctionInputs] = useState<
     Record<string, string[]>
   >({})
-
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>(
     {},
   )
   const [results, setResults] = useState<Record<string, string>>({})
-  const [expandedFunctions, setExpandedFunctions] = useState<
-    Record<string, boolean>
-  >({})
   const [isFetchingAbi, setIsFetchingAbi] = useState(false)
 
   const { address: walletAddress, isConnected } = useAccount()
@@ -34,8 +40,7 @@ const ContractInteraction: React.FC = () => {
     setIsFetchingAbi(true)
     try {
       const client = createPublicClient({
-        chain: mainnet,
-        transport: http(),
+        transport: http(customRPC || undefined),
       })
 
       const result = await whatsabi.autoload(address as `0x${string}`, {
@@ -49,7 +54,7 @@ const ContractInteraction: React.FC = () => {
       setAbi(result.abi)
       setReadFunctions(
         result.abi.filter(
-          (item: any) =>
+          (item) =>
             item.type === 'function' &&
             (item.stateMutability === 'view' ||
               item.stateMutability === 'pure'),
@@ -57,15 +62,13 @@ const ContractInteraction: React.FC = () => {
       )
       setWriteFunctions(
         result.abi.filter(
-          (item: any) =>
+          (item) =>
             item.type === 'function' &&
             item.stateMutability !== 'view' &&
             item.stateMutability !== 'pure',
         ),
       )
       setResolvedAddress(result.address)
-
-      console.log('Full result:', result)
     } catch (error) {
       console.error('Error fetching ABI:', error)
     } finally {
@@ -73,70 +76,84 @@ const ContractInteraction: React.FC = () => {
     }
   }
 
-  const callReadFunction = async (func: any) => {
+  const callFunction = async (func: ABIFunction, isWrite: boolean) => {
     setLoadingStates((prev) => ({ ...prev, [func.name]: true }))
     try {
       const client = createPublicClient({
         chain: mainnet,
-        transport: http(),
+        transport: http(customRPC || undefined),
       })
 
       const args = func.inputs.map(
-        (_: any, index: number) => functionInputs[func.name]?.[index] || '',
+        (_, index) => functionInputs[func.name]?.[index] || '',
       )
-      const result = await client.readContract({
-        address: resolvedAddress as `0x${string}`,
-        abi: [func],
-        functionName: func.name,
-        args,
-      })
-      setResults((prev) => ({ ...prev, [func.name]: JSON.stringify(result) }))
+
+      if (isWrite) {
+        if (!isConnected || !walletClient) {
+          throw new Error('Wallet not connected')
+        }
+        const { request } = await client.simulateContract({
+          account: walletAddress,
+          address: resolvedAddress as `0x${string}`,
+          abi: [func],
+          functionName: func.name,
+          args,
+        })
+        const hash = await walletClient.writeContract(request)
+        setResults((prev) => ({
+          ...prev,
+          [func.name]: `Transaction hash: ${hash}`,
+        }))
+      } else {
+        const result = await client.readContract({
+          address: resolvedAddress as `0x${string}`,
+          abi: [func],
+          functionName: func.name,
+          args,
+        })
+        setResults((prev) => ({
+          ...prev,
+          [func.name]: formatResult(result, func.outputs),
+        }))
+      }
     } catch (error) {
       setResults((prev) => ({
         ...prev,
-        [func.name]: `Error: ${error.message}`,
+        [func.name]: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
       }))
     } finally {
       setLoadingStates((prev) => ({ ...prev, [func.name]: false }))
     }
   }
 
-  const callWriteFunction = async (func: any) => {
-    if (!isConnected || !walletClient) {
-      console.error('Wallet not connected')
-      return
+  const formatResult = (
+    result: unknown,
+    outputs: ABIFunction['outputs'],
+  ): string => {
+    if (result === null || result === undefined) {
+      return 'null'
     }
 
-    setLoadingStates((prev) => ({ ...prev, [func.name]: true }))
-    try {
-      const client = createPublicClient({
-        chain: mainnet,
-        transport: http(),
-      })
-
-      const args = func.inputs.map(
-        (_: any, index: number) => functionInputs[func.name]?.[index] || '',
-      )
-      const { request } = await client.simulateContract({
-        account: walletAddress,
-        address: resolvedAddress as `0x${string}`,
-        abi: [func],
-        functionName: func.name,
-        args,
-      })
-      const hash = await walletClient.writeContract(request)
-      setResults((prev) => ({
-        ...prev,
-        [func.name]: `Transaction hash: ${hash}`,
-      }))
-    } catch (error) {
-      setResults((prev) => ({
-        ...prev,
-        [func.name]: `Error: ${error.message}`,
-      }))
-    } finally {
-      setLoadingStates((prev) => ({ ...prev, [func.name]: false }))
+    if (typeof result === 'bigint') {
+      return result.toString()
     }
+
+    if (Array.isArray(result)) {
+      return `[${result.map((item, index) => formatResult(item, outputs?.[index]?.components || [])).join(', ')}]`
+    }
+
+    if (typeof result === 'object') {
+      const formattedObj: Record<string, string> = {}
+      for (const [key, value] of Object.entries(result)) {
+        formattedObj[key] = formatResult(
+          value,
+          outputs?.find((o) => o.name === key)?.components || [],
+        )
+      }
+      return JSON.stringify(formattedObj, null, 2)
+    }
+
+    return String(result)
   }
 
   const handleInputChange = (
@@ -146,144 +163,104 @@ const ContractInteraction: React.FC = () => {
   ) => {
     setFunctionInputs((prev) => ({
       ...prev,
-      [funcName]: {
-        ...prev[funcName],
-        [index]: value,
-      },
+      [funcName]: { ...prev[funcName], [index]: value },
     }))
   }
 
-  const demoAddresses = [
-    { name: 'USDT', address: '0xdAC17F958D2ee523a2206206994597C13D831ec7' },
-    { name: 'USDC', address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' },
-    { name: 'DAI', address: '0x6B175474E89094C44Da98b954EedeAC495271d0F' },
-  ]
+  const renderFunctionInputs = (func: ABIFunction) => (
+    <div className="space-y-2">
+      {func.inputs.map((input, inputIndex) => (
+        <Input
+          key={`${func.name}-${input.name}-${inputIndex}`}
+          placeholder={`${input.name} (${input.type})`}
+          onChange={(e) =>
+            handleInputChange(func.name, inputIndex, e.target.value)
+          }
+        />
+      ))}
+    </div>
+  )
+
+  const renderFunctionItem = (func: ABIFunction, isWrite: boolean) => (
+    <AccordionItem value={func.name} key={func.name}>
+      <AccordionTrigger>{func.name}</AccordionTrigger>
+      <AccordionContent>
+        {renderFunctionInputs(func)}
+        <Button
+          onClick={() => callFunction(func, isWrite)}
+          className="mt-2"
+          disabled={(isWrite && !isConnected) || loadingStates[func.name]}
+        >
+          {loadingStates[func.name] ? 'Loading...' : 'Call'}
+        </Button>
+        {results[func.name] && (
+          <div className="mt-2 p-2 bg-muted rounded">
+            <pre className="whitespace-pre-wrap break-words">
+              <code>{results[func.name]}</code>
+            </pre>
+          </div>
+        )}
+      </AccordionContent>
+    </AccordionItem>
+  )
 
   return (
     <div className="space-y-4">
-      <div className="flex space-x-2">
-        <Input
-          placeholder="Contract Address"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-        />
-        <Button onClick={fetchABI} disabled={isFetchingAbi}>
-          {isFetchingAbi ? 'Loading...' : 'Load Contract'}
-        </Button>
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="rpc-input">RPC URL</Label>
+          <RPCInput
+            value={customRPC}
+            onChange={setCustomRPC}
+            placeholder="Enter custom RPC URL"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="address-input">Contract Address</Label>
+          <div className="flex space-x-2">
+            <Input
+              id="address-input"
+              placeholder="Contract Address"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+            />
+            <Button onClick={fetchABI} disabled={isFetchingAbi}>
+              {isFetchingAbi ? 'Loading...' : 'Load'}
+            </Button>
+          </div>
+        </div>
+        {resolvedAddress && resolvedAddress !== address && (
+          <p className="text-sm text-muted-foreground">
+            Resolved to: {resolvedAddress}
+          </p>
+        )}
+        <div className="flex justify-start">
+          <ConnectKitButton />
+        </div>
       </div>
-      {resolvedAddress && resolvedAddress !== address && (
-        <p>Resolved to: {resolvedAddress}</p>
-      )}
-      <ConnectKitButton />
+
       {readFunctions.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Read Functions</CardTitle>
           </CardHeader>
           <CardContent>
-            {readFunctions.map((func, index) => (
-              <div key={index} className="mb-4">
-                <Button
-                  onClick={() =>
-                    setExpandedFunctions((prev) => ({
-                      ...prev,
-                      [func.name]: !prev[func.name],
-                    }))
-                  }
-                  className="w-full justify-between"
-                >
-                  {func.name}
-                  <span>{expandedFunctions[func.name] ? '▲' : '▼'}</span>
-                </Button>
-                {expandedFunctions[func.name] && (
-                  <div className="mt-2">
-                    {func.inputs.map((input: any, inputIndex: number) => (
-                      <Input
-                        key={inputIndex}
-                        type="text"
-                        placeholder={`${input.name} (${input.type})`}
-                        onChange={(e) =>
-                          handleInputChange(
-                            func.name,
-                            inputIndex,
-                            e.target.value,
-                          )
-                        }
-                        className="mt-2"
-                      />
-                    ))}
-                    <Button
-                      onClick={() => callReadFunction(func)}
-                      className="mt-2"
-                      disabled={loadingStates[func.name]}
-                    >
-                      {loadingStates[func.name] ? 'Loading...' : 'Call'}
-                    </Button>
-                    {results[func.name] && (
-                      <div className="mt-2 p-2 bg-muted rounded">
-                        <p>Result: {results[func.name]}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
+            <Accordion type="single" collapsible className="w-full">
+              {readFunctions.map((func) => renderFunctionItem(func, false))}
+            </Accordion>
           </CardContent>
         </Card>
       )}
+
       {writeFunctions.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Write Functions</CardTitle>
           </CardHeader>
           <CardContent>
-            {writeFunctions.map((func, index) => (
-              <div key={index} className="mb-4">
-                <Button
-                  onClick={() =>
-                    setExpandedFunctions((prev) => ({
-                      ...prev,
-                      [func.name]: !prev[func.name],
-                    }))
-                  }
-                  className="w-full justify-between"
-                >
-                  {func.name}
-                  <span>{expandedFunctions[func.name] ? '▲' : '▼'}</span>
-                </Button>
-                {expandedFunctions[func.name] && (
-                  <div className="mt-2">
-                    {func.inputs.map((input: any, inputIndex: number) => (
-                      <Input
-                        key={inputIndex}
-                        type="text"
-                        placeholder={`${input.name} (${input.type})`}
-                        onChange={(e) =>
-                          handleInputChange(
-                            func.name,
-                            inputIndex,
-                            e.target.value,
-                          )
-                        }
-                        className="mt-2"
-                      />
-                    ))}
-                    <Button
-                      onClick={() => callWriteFunction(func)}
-                      className="mt-2"
-                      disabled={!isConnected || loadingStates[func.name]}
-                    >
-                      {loadingStates[func.name] ? 'Loading...' : 'Call'}
-                    </Button>
-                    {results[func.name] && (
-                      <div className="mt-2 p-2 bg-muted rounded">
-                        <p>Result: {results[func.name]}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
+            <Accordion type="single" collapsible className="w-full">
+              {writeFunctions.map((func) => renderFunctionItem(func, true))}
+            </Accordion>
           </CardContent>
         </Card>
       )}
