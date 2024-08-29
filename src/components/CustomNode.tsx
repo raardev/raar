@@ -1,6 +1,31 @@
 import { Handle, Position } from '@xyflow/react'
 
-const CustomNode = ({ data }) => {
+interface Function {
+  name: string
+  visibility: string
+  stateMutability: string
+  isConstructor?: boolean
+}
+
+interface Variable {
+  name: string
+  typeName: string
+  visibility: string
+}
+
+interface NodeData {
+  name: string
+  type: string
+  isAbstract?: boolean
+  functions: Function[]
+  variables: Variable[]
+}
+
+interface CustomNodeProps {
+  data: NodeData
+}
+
+const CustomNode: React.FC<CustomNodeProps> = ({ data }) => {
   const getVisibilityColor = (visibility: string) => {
     switch (visibility) {
       case 'public':
@@ -18,7 +43,7 @@ const CustomNode = ({ data }) => {
 
   console.log(
     `Node ${data.name} functions:`,
-    data.functions.map((f) => f.name),
+    data.functions.map((f: Function) => f.name),
   )
 
   return (
@@ -34,9 +59,9 @@ const CustomNode = ({ data }) => {
       </div>
       <div className="mt-2">
         <div className="font-semibold">Functions:</div>
-        {data.functions.map((func, index) => (
+        {data.functions.map((func: Function, index: number) => (
           <div
-            key={index}
+            key={func.name}
             className={`text-sm ${getVisibilityColor(func.visibility)}`}
           >
             {func.name}
@@ -60,9 +85,9 @@ const CustomNode = ({ data }) => {
       </div>
       <div className="mt-2">
         <div className="font-semibold">Variables:</div>
-        {data.variables.map((variable, index) => (
+        {data.variables.map((variable: Variable) => (
           <div
-            key={index}
+            key={variable.name}
             className={`text-sm ${getVisibilityColor(variable.visibility)}`}
           >
             {variable.name}: {variable.typeName} ({variable.visibility})

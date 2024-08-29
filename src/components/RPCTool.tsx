@@ -200,7 +200,7 @@ const RPCTool: React.FC = () => {
       updateRequest(id, { response: data, latency: endTime - startTime })
     } catch (error) {
       updateRequest(id, {
-        response: { error: (error as Error).message },
+        response: { status: 500, statusText: (error as Error).message },
         latency: null,
       })
     } finally {
@@ -383,7 +383,10 @@ const RPCTool: React.FC = () => {
                       <TooltipTrigger asChild>
                         <Button
                           onClick={() =>
-                            downloadJson(convertedResponse || req.response)
+                            downloadJson(
+                              convertedResponse ||
+                                (req.response as RPCResponse),
+                            )
                           }
                           variant="ghost"
                           size="icon"

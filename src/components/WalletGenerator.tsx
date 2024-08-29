@@ -35,13 +35,13 @@ interface Wallet {
   selected: boolean
 }
 
-type Wordlist =
-  | typeof english
-  | typeof japanese
-  | typeof korean
-  | typeof spanish
-  | typeof simplifiedChinese
-  | typeof traditionalChinese
+// type Wordlist =
+//   | typeof english
+//   | typeof japanese
+//   | typeof korean
+//   | typeof spanish
+//   | typeof simplifiedChinese
+//   | typeof traditionalChinese
 
 const wordlists = {
   english,

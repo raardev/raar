@@ -27,7 +27,6 @@ interface RPCStatus {
 }
 
 const BATCH_SIZE = 5
-const CHECK_INTERVAL = 30000 // 30 seconds
 
 const ChainList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -39,115 +38,87 @@ const ChainList: React.FC = () => {
     [key: number]: AbortController
   }>({})
 
-  const checkRPCHealth = useCallback(
-    async (rpc: string, signal?: AbortSignal) => {
-      const startTime = Date.now()
-      try {
-        const client = createPublicClient({
-          transport: http(rpc),
-        })
+  const checkRPCHealth = useCallback(async (rpc: string) => {
+    const startTime = Date.now()
+    try {
+      const client = createPublicClient({
+        transport: http(rpc),
+      })
 
-        const [blockNumber, clientVersion] = await Promise.all([
-          client.request({ method: 'eth_blockNumber', params: [] }, { signal }),
-          client.request(
-            { method: 'web3_clientVersion', params: [] },
-            { signal },
-          ),
-        ])
+      const [clientVersion] = await Promise.all([
+        client.request({ method: 'web3_clientVersion' }),
+      ])
 
-        const endTime = Date.now()
-        const latency = endTime - startTime
+      const endTime = Date.now()
+      const latency = endTime - startTime
 
-        const namespaces = ['eth', 'net', 'web3', 'debug', 'trace', 'txpool']
-        const namespaceResults = await Promise.all(
-          namespaces.map(async (namespace) => {
-            try {
-              switch (namespace) {
-                case 'eth':
-                  await client.request(
-                    { method: 'eth_blockNumber', params: [] },
-                    { signal },
-                  )
-                  break
-                case 'net':
-                  await client.request(
-                    { method: 'net_version', params: [] },
-                    { signal },
-                  )
-                  break
-                case 'web3':
-                  await client.request(
-                    {
-                      method: 'web3_clientVersion',
-                      params: [],
-                    },
-                    { signal },
-                  )
-                  break
-                case 'debug':
-                  await client.request(
-                    {
-                      method: 'debug_traceBlockByNumber',
-                      params: ['latest', {}],
-                    },
-                    { signal },
-                  )
-                  break
-                case 'trace':
-                  await client.request(
-                    {
-                      method: 'trace_block',
-                      params: ['latest'],
-                    },
-                    { signal },
-                  )
-                  break
-                case 'txpool':
-                  await client.request(
-                    { method: 'txpool_status', params: [] },
-                    { signal },
-                  )
-                  break
-              }
-              return [namespace, true]
-            } catch {
-              return [namespace, false]
+      const namespaces = ['eth', 'net', 'web3', 'debug', 'trace', 'txpool']
+      const namespaceResults = await Promise.all(
+        namespaces.map(async (namespace) => {
+          try {
+            switch (namespace) {
+              case 'eth':
+                await client.request({ method: 'eth_blockNumber' })
+                break
+              case 'net':
+                await client.request({ method: 'net_version' })
+                break
+              case 'web3':
+                await client.request({ method: 'web3_clientVersion' })
+                break
+              case 'debug':
+                await (client.request as any)({
+                  method: 'debug_traceBlockByNumber',
+                  params: ['latest', {}],
+                })
+                break
+              case 'trace':
+                await (client.request as any)({
+                  method: 'trace_block',
+                  params: ['latest'],
+                })
+                break
+              case 'txpool':
+                await (client.request as any)({ method: 'txpool_status' })
+                break
             }
-          }),
-        )
+            return [namespace, true]
+          } catch {
+            return [namespace, false]
+          }
+        }),
+      )
 
-        const supportedNamespaces = Object.fromEntries(namespaceResults)
+      const supportedNamespaces = Object.fromEntries(namespaceResults)
 
-        return {
-          status: 'healthy' as const,
-          latency,
-          namespaces: supportedNamespaces,
-          clientVersion: clientVersion as string,
-          url: rpc,
-        }
-      } catch (error) {
-        if (error.name === 'AbortError') {
-          throw error // Re-throw AbortError to be caught in the calling function
-        }
-        console.error('RPC health check failed:', error)
-        return {
-          status: 'unhealthy' as const,
-          namespaces: {
-            eth: false,
-            net: false,
-            web3: false,
-            debug: false,
-            trace: false,
-            txpool: false,
-          },
-          clientVersion: 'Unknown',
-          url: rpc,
-          latency: undefined,
-        }
+      return {
+        status: 'healthy' as const,
+        latency,
+        namespaces: supportedNamespaces,
+        clientVersion: clientVersion as string,
+        url: rpc,
       }
-    },
-    [],
-  )
+    } catch (error: unknown) {
+      if ((error as Error).name === 'AbortError') {
+        throw error // Re-throw AbortError to be caught in the calling function
+      }
+      console.error('RPC health check failed:', error)
+      return {
+        status: 'unhealthy' as const,
+        namespaces: {
+          eth: false,
+          net: false,
+          web3: false,
+          debug: false,
+          trace: false,
+          txpool: false,
+        },
+        clientVersion: 'Unknown',
+        url: rpc,
+        latency: undefined,
+      }
+    }
+  }, [])
 
   const checkChainRPCs = useCallback(
     async (chainId: number) => {
@@ -175,13 +146,13 @@ const ChainList: React.FC = () => {
               },
             }))
             try {
-              const result = await checkRPCHealth(rpc, abortController.signal)
+              const result = await checkRPCHealth(rpc)
               setRpcStatuses((prev) => ({
                 ...prev,
                 [rpc]: { ...prev[rpc], ...result },
               }))
-            } catch (error) {
-              if (error.name === 'AbortError') {
+            } catch (error: unknown) {
+              if ((error as Error).name === 'AbortError') {
                 console.log('Request aborted for RPC:', rpc)
               } else {
                 console.error('Error checking RPC health:', error)
@@ -204,7 +175,7 @@ const ChainList: React.FC = () => {
         })
       }
     },
-    [chains, checkRPCHealth],
+    [checkRPCHealth],
   )
 
   const toggleChainExpansion = useCallback(
@@ -271,6 +242,7 @@ const ChainList: React.FC = () => {
       return (
         <div>
           <button
+            type="button"
             onClick={() => toggleChainExpansion(chain.chainId)}
             className="flex items-center space-x-2 text-sm font-medium hover:underline"
           >
@@ -282,7 +254,7 @@ const ChainList: React.FC = () => {
               items={sortedRPCs}
               maxHeight={400}
               estimatedItemHeight={80}
-              renderItem={(rpc, index) => {
+              renderItem={(rpc) => {
                 const rpcStatus = rpcStatuses[rpc] || {
                   status: 'checking',
                   namespaces: {
@@ -358,7 +330,7 @@ const ChainList: React.FC = () => {
         </div>
       )
     },
-    [expandedChains, rpcStatuses, sortRPCs, toggleChainExpansion, handleCopy],
+    [expandedChains, rpcStatuses, toggleChainExpansion],
   )
 
   const filteredChains = useMemo(() => {
@@ -367,15 +339,15 @@ const ChainList: React.FC = () => {
         chain.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         chain.chainId.toString().includes(searchTerm),
     )
-  }, [chains, searchTerm])
+  }, [searchTerm])
 
   const columnHelper = createColumnHelper<Chain>()
 
   const columns = useMemo<ColumnDef<Chain, any>[]>(
     () => [
-      columnHelper.accessor((row, index) => index + 1, {
+      columnHelper.display({
         id: 'index',
-        cell: (info) => info.getValue(),
+        cell: (info) => info.row.index + 1,
         header: () => <span>#</span>,
         size: 50,
       }),
@@ -395,7 +367,7 @@ const ChainList: React.FC = () => {
         size: 600,
       }),
     ],
-    [renderRPCGroup],
+    [columnHelper, renderRPCGroup],
   )
 
   return (

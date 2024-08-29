@@ -39,11 +39,9 @@ const MultiChainGasTracker: React.FC = () => {
   const [selectedChains, setSelectedChains] = useState<Chain[]>([])
   const [gasPrices, setGasPrices] = useState<GasPrice[]>([])
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
-  const [isLoading, setIsLoading] = useState<boolean>(true)
   const [newChainRPC, setNewChainRPC] = useState<string>('')
 
   const fetchGasPrices = useCallback(async () => {
-    setIsLoading(true)
     const prices: GasPrice[] = []
 
     for (const chain of selectedChains) {
@@ -68,7 +66,6 @@ const MultiChainGasTracker: React.FC = () => {
 
     setGasPrices(prices)
     setLastUpdated(new Date())
-    setIsLoading(false)
   }, [selectedChains])
 
   useEffect(() => {
@@ -205,7 +202,7 @@ const MultiChainGasTracker: React.FC = () => {
           <Bar dataKey="price" radius={[0, 4, 4, 0]} barSize={24}>
             {sortedGasPrices.map((entry, index) => (
               <Cell
-                key={`cell-${index}`}
+                key={entry.chainName}
                 fill={`hsl(var(--chart-${(index % 5) + 1}))`}
               />
             ))}

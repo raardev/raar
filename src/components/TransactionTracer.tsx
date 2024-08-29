@@ -50,7 +50,7 @@ const TransactionTracer: React.FC = () => {
         amount: formatEther(transaction.value),
         token: 'ETH',
         from: transaction.from,
-        to: transaction.to,
+        to: transaction.to ?? '',
       })
     }
 
@@ -92,40 +92,44 @@ const TransactionTracer: React.FC = () => {
         })
       } else if (log.topics[0] === erc1155SingleTransferEventTopic) {
         // ERC1155 single transfer
-        const [id, value] = log.data.slice(2).match(/.{1,64}/g)
-        actions.push({
-          type: 'transfer',
-          amount: BigInt(`0x${value}`).toString(),
-          token: log.address,
-          from: `0x${log.topics[2].slice(-40)}`,
-          to: `0x${log.topics[3].slice(-40)}`,
-          tokenId: BigInt(`0x${id}`).toString(),
-        })
-      } else if (log.topics[0] === erc1155BatchTransferEventTopic) {
-        // ERC1155 batch transfer
-        const [, idsOffset, idsLength, valuesOffset, valuesLength] = log.data
-          .slice(2)
-          .match(/.{1,64}/g)
-        const idsStart = Number.parseInt(idsOffset, 16) * 2
-        const idsEnd = idsStart + Number.parseInt(idsLength, 16) * 64
-        const valuesStart = Number.parseInt(valuesOffset, 16) * 2
-        const valuesEnd = valuesStart + Number.parseInt(valuesLength, 16) * 64
-
-        const ids = log.data.slice(idsStart + 2, idsEnd + 2).match(/.{1,64}/g)
-        const values = log.data
-          .slice(valuesStart + 2, valuesEnd + 2)
-          .match(/.{1,64}/g)
-
-        ids.forEach((id: string, index: number) => {
+        const matches = log.data.slice(2).match(/.{1,64}/g)
+        if (matches && matches.length >= 2) {
+          const [id, value] = matches
           actions.push({
             type: 'transfer',
-            amount: BigInt(`0x${values[index]}`).toString(),
+            amount: BigInt(`0x${value}`).toString(),
             token: log.address,
-            from: `0x${log.topics[2].slice(-40)}`,
-            to: `0x${log.topics[3].slice(-40)}`,
+            from: `0x${log.topics[2]?.slice(-40) ?? ''}`,
+            to: `0x${log.topics[3]?.slice(-40) ?? ''}`,
             tokenId: BigInt(`0x${id}`).toString(),
           })
-        })
+        }
+      } else if (log.topics[0] === erc1155BatchTransferEventTopic) {
+        // ERC1155 batch transfer
+        const matches = log.data.slice(2).match(/.{1,64}/g)
+        if (matches && matches.length >= 5) {
+          const [, idsOffset, idsLength, valuesOffset, valuesLength] = matches
+          const idsStart = Number.parseInt(idsOffset, 16) * 2
+          const idsEnd = idsStart + Number.parseInt(idsLength, 16) * 64
+          const valuesStart = Number.parseInt(valuesOffset, 16) * 2
+          const valuesEnd = valuesStart + Number.parseInt(valuesLength, 16) * 64
+
+          const ids = log.data.slice(idsStart + 2, idsEnd + 2).match(/.{1,64}/g)
+          const values =
+            log.data.slice(valuesStart + 2, valuesEnd + 2).match(/.{1,64}/g) ??
+            []
+
+          ids?.forEach((id: string, index: number) => {
+            actions.push({
+              type: 'transfer',
+              amount: BigInt(`0x${values?.[index] ?? '0'}`).toString(),
+              token: log.address,
+              from: `0x${log.topics[2]?.slice(-40) ?? ''}`,
+              to: `0x${log.topics[3]?.slice(-40) ?? ''}`,
+              tokenId: BigInt(`0x${id}`).toString(),
+            })
+          })
+        }
       }
     }
 
@@ -186,7 +190,7 @@ const TransactionTracer: React.FC = () => {
           client.getTransactionReceipt({ hash: hash as `0x${string}` }),
         ])
 
-        const changes = await fetchValueChanges(client, transaction, receipt)
+        const changes = await fetchValueChanges(transaction, receipt)
         const parsedActions = parseActions(transaction, receipt)
 
         // Fetch token info
@@ -208,14 +212,18 @@ const TransactionTracer: React.FC = () => {
         const updatedChanges = changes.map((change) => ({
           ...change,
           tokenInfo:
-            change.type === 'token' ? tokenInfoMap[change.token] : undefined,
+            change.type === 'token'
+              ? tokenInfoMap[change.token as keyof typeof tokenInfoMap]
+              : undefined,
         }))
         setValueChanges(updatedChanges)
 
         const updatedActions = parsedActions.map((action) => ({
           ...action,
           tokenInfo:
-            action.token !== 'ETH' ? tokenInfoMap[action.token] : undefined,
+            action.token !== 'ETH'
+              ? tokenInfoMap[action.token as keyof typeof tokenInfoMap]
+              : undefined,
         }))
         setActions(updatedActions)
       } catch (error) {
@@ -285,7 +293,7 @@ const TransactionTracer: React.FC = () => {
 
       {isLoading ? (
         <Skeleton className="h-40 w-full" />
-      ) : actions.length > 0 ? (
+      ) : actions && actions.length > 0 ? (
         <ActionsList title="Actions" actions={actions} />
       ) : null}
 

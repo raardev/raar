@@ -20,7 +20,6 @@ import RPCInput from './RPCInput'
 const ContractInteraction: React.FC = () => {
   const [address, setAddress] = useState('')
   const [customRPC, setCustomRPC] = useState('')
-  const [abi, setAbi] = useState<ABIFunction[]>([])
   const [readFunctions, setReadFunctions] = useState<ABIFunction[]>([])
   const [writeFunctions, setWriteFunctions] = useState<ABIFunction[]>([])
   const [resolvedAddress, setResolvedAddress] = useState('')
@@ -51,21 +50,20 @@ const ContractInteraction: React.FC = () => {
           console.error('autoload error', phase, context),
       })
 
-      setAbi(result.abi)
+      const functionAbi = result.abi.filter(
+        (item): item is ABIFunction => item.type === 'function',
+      )
+
       setReadFunctions(
-        result.abi.filter(
+        functionAbi.filter(
           (item) =>
-            item.type === 'function' &&
-            (item.stateMutability === 'view' ||
-              item.stateMutability === 'pure'),
+            item.stateMutability === 'view' || item.stateMutability === 'pure',
         ),
       )
       setWriteFunctions(
-        result.abi.filter(
+        functionAbi.filter(
           (item) =>
-            item.type === 'function' &&
-            item.stateMutability !== 'view' &&
-            item.stateMutability !== 'pure',
+            item.stateMutability !== 'view' && item.stateMutability !== 'pure',
         ),
       )
       setResolvedAddress(result.address)
@@ -77,15 +75,15 @@ const ContractInteraction: React.FC = () => {
   }
 
   const callFunction = async (func: ABIFunction, isWrite: boolean) => {
-    setLoadingStates((prev) => ({ ...prev, [func.name]: true }))
+    setLoadingStates((prev) => ({ ...prev, [func.name as string]: true }))
     try {
       const client = createPublicClient({
         chain: mainnet,
         transport: http(customRPC || undefined),
       })
 
-      const args = func.inputs.map(
-        (_, index) => functionInputs[func.name]?.[index] || '',
+      const args = (func.inputs ?? []).map(
+        (_, index) => functionInputs[func.name ?? '']?.[index] ?? '',
       )
 
       if (isWrite) {
@@ -96,33 +94,33 @@ const ContractInteraction: React.FC = () => {
           account: walletAddress,
           address: resolvedAddress as `0x${string}`,
           abi: [func],
-          functionName: func.name,
+          functionName: func.name ?? 'unknownFunction',
           args,
         })
         const hash = await walletClient.writeContract(request)
         setResults((prev) => ({
           ...prev,
-          [func.name]: `Transaction hash: ${hash}`,
+          [func.name as string]: `Transaction hash: ${hash}`,
         }))
       } else {
         const result = await client.readContract({
           address: resolvedAddress as `0x${string}`,
           abi: [func],
-          functionName: func.name,
+          functionName: func.name ?? 'unknownFunction',
           args,
         })
         setResults((prev) => ({
           ...prev,
-          [func.name]: formatResult(result, func.outputs),
+          [func.name as string]: formatResult(result, func.outputs),
         }))
       }
     } catch (error) {
       setResults((prev) => ({
         ...prev,
-        [func.name]: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        [func.name as string]: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
       }))
     } finally {
-      setLoadingStates((prev) => ({ ...prev, [func.name]: false }))
+      setLoadingStates((prev) => ({ ...prev, [func.name as string]: false }))
     }
   }
 
@@ -139,7 +137,8 @@ const ContractInteraction: React.FC = () => {
     }
 
     if (Array.isArray(result)) {
-      return `[${result.map((item, index) => formatResult(item, outputs?.[index]?.components || [])).join(', ')}]`
+      // @ts-expect-error: outputs is not always defined
+      return `[${result.map((item, index) => formatResult(item, outputs?.[index]?.components ?? [])).join(', ')}]`
     }
 
     if (typeof result === 'object') {
@@ -147,6 +146,7 @@ const ContractInteraction: React.FC = () => {
       for (const [key, value] of Object.entries(result)) {
         formattedObj[key] = formatResult(
           value,
+          // @ts-expect-error: outputs is not always defined
           outputs?.find((o) => o.name === key)?.components || [],
         )
       }
@@ -169,12 +169,16 @@ const ContractInteraction: React.FC = () => {
 
   const renderFunctionInputs = (func: ABIFunction) => (
     <div className="space-y-2">
-      {func.inputs.map((input, inputIndex) => (
+      {func.inputs?.map((input, inputIndex) => (
         <Input
           key={`${func.name}-${input.name}-${inputIndex}`}
           placeholder={`${input.name} (${input.type})`}
           onChange={(e) =>
-            handleInputChange(func.name, inputIndex, e.target.value)
+            handleInputChange(
+              func.name ?? 'unknownFunction',
+              inputIndex,
+              e.target.value,
+            )
           }
         />
       ))}
@@ -182,21 +186,29 @@ const ContractInteraction: React.FC = () => {
   )
 
   const renderFunctionItem = (func: ABIFunction, isWrite: boolean) => (
-    <AccordionItem value={func.name} key={func.name}>
-      <AccordionTrigger>{func.name}</AccordionTrigger>
+    <AccordionItem
+      value={func.name ?? 'unknownFunction'}
+      key={func.name ?? 'unknownFunction'}
+    >
+      <AccordionTrigger>{func.name ?? 'Unknown Function'}</AccordionTrigger>
       <AccordionContent>
         {renderFunctionInputs(func)}
         <Button
           onClick={() => callFunction(func, isWrite)}
           className="mt-2"
-          disabled={(isWrite && !isConnected) || loadingStates[func.name]}
+          disabled={
+            (isWrite && !isConnected) ||
+            loadingStates[func.name ?? 'unknownFunction']
+          }
         >
-          {loadingStates[func.name] ? 'Loading...' : 'Call'}
+          {loadingStates[func.name ?? 'unknownFunction']
+            ? 'Loading...'
+            : 'Call'}
         </Button>
-        {results[func.name] && (
+        {results[func.name ?? 'unknownFunction'] && (
           <div className="mt-2 p-2 bg-muted rounded">
             <pre className="whitespace-pre-wrap break-words">
-              <code>{results[func.name]}</code>
+              <code>{results[func.name ?? 'unknownFunction']}</code>
             </pre>
           </div>
         )}

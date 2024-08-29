@@ -24,7 +24,6 @@ interface ContractFile {
 interface ContractElement {
   type: 'contract' | 'library' | 'interface'
   name: string
-  isAbstract: boolean
   functions: {
     name: string
     visibility: string
@@ -47,8 +46,8 @@ interface ContractElement {
 const ContractMap: React.FC = () => {
   const [address, setAddress] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [nodes, setNodes, onNodesChange] = useNodesState([])
-  const [edges, setEdges, onEdgesChange] = useEdgesState([])
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
 
   const fetchSourceCode = async () => {
     setIsLoading(true)
@@ -62,7 +61,7 @@ const ContractMap: React.FC = () => {
       const data = await response.json()
 
       if (data.status === 'perfect' || data.status === 'partial') {
-        const contractFiles = data.files.filter((file) =>
+        const contractFiles = data.files.filter((file: any) =>
           file.name.endsWith('.sol'),
         )
         const contractElements = parseContractFiles(contractFiles)
@@ -70,9 +69,11 @@ const ContractMap: React.FC = () => {
       } else {
         throw new Error('Contract not verified on Sourcify')
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error fetching source code:', error)
-      toast.error(error.message || 'Error fetching source code')
+      toast.error(
+        error instanceof Error ? error.message : 'Error fetching source code',
+      )
     } finally {
       setIsLoading(false)
     }
@@ -89,12 +90,13 @@ const ContractMap: React.FC = () => {
         parser.visit(ast, {
           ContractDefinition: (node) => {
             const element: ContractElement = {
-              type: node.kind,
+              type: node.kind as 'contract' | 'library' | 'interface',
               name: node.name,
-              isAbstract: node.isAbstract,
               functions: [],
               variables: [],
-              inherits: node.baseContracts.map((base) => base.baseName.name),
+              inherits: node.baseContracts.map(
+                (base) => base.baseName.namePath,
+              ),
               functionCalls: [],
             }
 
@@ -124,13 +126,15 @@ const ContractMap: React.FC = () => {
                 })
               },
               VariableDeclaration: (varNode) => {
-                if (varNode.stateVariable) {
+                if (varNode.isStateVar) {
                   element.variables.push({
-                    name: varNode.name,
-                    typeName: parser.visit(varNode.typeName, {
-                      ElementaryTypeName: (node) => node.name,
-                      UserDefinedTypeName: (node) => node.namePath,
-                    }),
+                    name: varNode.name ?? 'unnamed',
+                    typeName:
+                      // @ts-ignore
+                      parser.visit(varNode.typeName, {
+                        ElementaryTypeName: (node) => node.name,
+                        UserDefinedTypeName: (node) => node.namePath,
+                      }) ?? 'unknown',
                     visibility: varNode.visibility || 'internal',
                   })
                 }
@@ -146,6 +150,7 @@ const ContractMap: React.FC = () => {
       }
     })
 
+    // biome-ignore lint/complexity/noForEach: <explanation>
     elements.forEach((element) => {
       element.inherits = element.inherits.filter((base) => contractMap[base])
     })
@@ -166,10 +171,11 @@ const ContractMap: React.FC = () => {
         newNodes.push({
           id: element.name,
           position: { x, y },
-          data: element,
+          data: { element }, // Wrap the element in an object
           type: 'contractNode',
         })
 
+        // biome-ignore lint/complexity/noForEach: <explanation>
         element.inherits.forEach((baseContract) => {
           if (contractNames.has(baseContract)) {
             newEdges.push({
@@ -184,15 +190,13 @@ const ContractMap: React.FC = () => {
           }
         })
 
+        // biome-ignore lint/complexity/noForEach: <explanation>
         element.functionCalls.forEach((call) => {
           if (contractNames.has(call.toContract)) {
             const targetElement = elements.find(
               (e) => e.name === call.toContract,
             )
-            if (
-              targetElement &&
-              targetElement.functions.some((f) => f.name === call.to)
-            ) {
+            if (targetElement?.functions.some((f) => f.name === call.to)) {
               newEdges.push({
                 id: `${element.name}-${call.from}-calls-${call.toContract}-${call.to}`,
                 source: element.name,
@@ -209,6 +213,7 @@ const ContractMap: React.FC = () => {
         })
       })
 
+      // biome-ignore lint/complexity/noForEach: <explanation>
       newEdges.forEach((edge) => {
         console.log(
           `Edge: ${edge.id}, Source: ${edge.source}, Target: ${edge.target}, SourceHandle: ${edge.sourceHandle}, TargetHandle: ${edge.targetHandle}`,

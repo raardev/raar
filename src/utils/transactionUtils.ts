@@ -1,5 +1,5 @@
 import type { TransactionInfo, ValueChange } from '@/types/transaction'
-import { type PublicClient, formatEther, formatUnits } from 'viem'
+import { formatEther, formatUnits } from 'viem'
 
 export const formatTransactionInfo = (transaction: any): TransactionInfo => ({
   hash: transaction.hash,
@@ -32,7 +32,6 @@ async function getUSDPrice(symbol: string): Promise<number> {
 }
 
 export const fetchValueChanges = async (
-  client: PublicClient,
   transaction: any,
   receipt: any,
 ): Promise<ValueChange[]> => {
@@ -58,7 +57,7 @@ export const fetchValueChanges = async (
   }
 
   // Calculate gas fee
-  const gasCost = receipt.gasUsed * receipt.effectiveGasPrice
+  const gasCost = BigInt(receipt.gasUsed) * receipt.effectiveGasPrice
   const gasEthAmount = formatEther(gasCost)
   const gasUsdValue = (Number(gasEthAmount) * ethPrice).toFixed(2)
   valueChanges.push({
@@ -163,7 +162,7 @@ export const fetchValueChanges = async (
         .slice(valuesStart + 2, valuesEnd + 2)
         .match(/.{1,64}/g)
 
-      ids.forEach((id, index) => {
+      ids.forEach((id: any, index: string | number) => {
         const tokenId = BigInt(`0x${id}`).toString()
         const amount = BigInt(`0x${values[index]}`).toString()
         valueChanges.push(

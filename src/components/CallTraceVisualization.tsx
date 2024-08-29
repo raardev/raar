@@ -5,6 +5,7 @@ import { type AutoloadResult, loaders, whatsabi } from '@shazow/whatsabi'
 import { useQuery } from '@tanstack/react-query'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import type { ABIFunction } from 'node_modules/@shazow/whatsabi/lib.types/abi'
+import type { AnyProvider } from 'node_modules/@shazow/whatsabi/lib.types/providers'
 import type React from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPublicClient, decodeFunctionData, formatEther, http } from 'viem'
@@ -98,7 +99,7 @@ const CallTraceVisualization: React.FC<CallTraceVisualizationProps> = ({
         for (const address of addresses) {
           try {
             const result = await whatsabi.autoload(address as `0x${string}`, {
-              provider: client,
+              provider: client as AnyProvider,
               followProxies: true,
               abiLoader: loader,
               onProgress: (phase) => console.log('autoload progress', phase),
@@ -222,9 +223,10 @@ const CallTraceVisualization: React.FC<CallTraceVisualizationProps> = ({
       const abi = decodedFunctions?.[node.to] || []
       const decodedCall = decodeFunctionCall(abi, node.input, node.output || '')
 
-      const { abi: contractAbi, name: contractName } = contractInfo?.[
-        node.to
-      ] || { abi: [], name: node.to }
+      const { name: contractName } = contractInfo?.[node.to] || {
+        abi: [],
+        name: node.to,
+      }
       const callType = node.type.toLowerCase()
       const callTypeColor =
         colorMap.callType[callType as keyof typeof colorMap.callType] ||
