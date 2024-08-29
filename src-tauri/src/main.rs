@@ -5,9 +5,8 @@ use alloy::{
     hex,
     node_bindings::anvil::{Anvil, AnvilInstance},
 };
-use std::io::{BufRead, BufReader};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tokio::sync::mpsc;
 use tokio::sync::Mutex;
 
 struct DevnetState {
@@ -15,54 +14,45 @@ struct DevnetState {
     logs: Arc<Mutex<Vec<String>>>,
 }
 
+#[derive(Serialize, Deserialize)]
+struct DevnetInfo {
+    rpc_url: String,
+    chain_id: u64,
+    client_version: String,
+    addresses: Vec<String>,
+    private_keys: Vec<String>,
+}
+
 #[tauri::command]
-async fn start_devnet(state: tauri::State<'_, Arc<Mutex<DevnetState>>>) -> Result<(), String> {
+async fn start_devnet(
+    state: tauri::State<'_, Arc<Mutex<DevnetState>>>,
+) -> Result<DevnetInfo, String> {
     let mut state = state.lock().await;
     if state.instance.is_some() {
         return Err("Devnet is already running".to_string());
     }
 
-    let (tx, mut rx) = mpsc::channel(100);
-    let logs = state.logs.clone();
+    // Spawn Anvil
+    let instance = Anvil::new().spawn();
 
-    // Spawn Anvil without any additional arguments
-    let mut anvil = Anvil::new().spawn();
+    let devnet_info = DevnetInfo {
+        rpc_url: instance.endpoint(),
+        chain_id: instance.chain_id(),
+        client_version: "Anvil".to_string(),
+        addresses: instance
+            .addresses()
+            .iter()
+            .map(|addr| format!("{:?}", addr))
+            .collect(),
+        private_keys: instance
+            .keys()
+            .iter()
+            .map(|key| format!("0x{}", hex::encode(key.to_bytes())))
+            .collect(),
+    };
 
-    // Attempt to capture stdout
-    match anvil.child_mut().stdout.take() {
-        Some(stdout) => {
-            tokio::spawn(async move {
-                let reader = BufReader::new(stdout);
-                for line in reader.lines() {
-                    if let Ok(line) = line {
-                        tx.send(line).await.expect("Failed to send log line");
-                    }
-                }
-            });
-
-            // Store logs in another task
-            tokio::spawn(async move {
-                while let Some(line) = rx.recv().await {
-                    let mut logs = logs.lock().await;
-                    logs.push(line);
-                    if logs.len() > 1000 {
-                        logs.remove(0);
-                    }
-                }
-            });
-
-            state.instance = Some(anvil);
-            Ok(())
-        }
-        None => {
-            // If we can't capture stdout, we'll still start Anvil but won't be able to show logs
-            state.instance = Some(anvil);
-            Err(
-                "Unable to capture Anvil stdout. Devnet started but logs won't be available."
-                    .to_string(),
-            )
-        }
-    }
+    state.instance = Some(instance);
+    Ok(devnet_info)
 }
 
 #[tauri::command]
@@ -126,9 +116,37 @@ async fn fork_network(
         return Err("Devnet is already running".to_string());
     }
 
-    let anvil = Anvil::new().fork(url).spawn();
-    state.instance = Some(anvil);
+    // Spawn Anvil with fork
+    let instance = Anvil::new().fork(url).spawn();
+
+    state.instance = Some(instance);
     Ok(())
+}
+
+#[tauri::command]
+async fn get_devnet_info(
+    state: tauri::State<'_, Arc<Mutex<DevnetState>>>,
+) -> Result<DevnetInfo, String> {
+    let state = state.lock().await;
+    if let Some(instance) = &state.instance {
+        Ok(DevnetInfo {
+            rpc_url: instance.endpoint(),
+            chain_id: instance.chain_id(),
+            client_version: "Anvil".to_string(),
+            addresses: instance
+                .addresses()
+                .iter()
+                .map(|addr| format!("{:?}", addr))
+                .collect(),
+            private_keys: instance
+                .keys()
+                .iter()
+                .map(|key| format!("0x{}", hex::encode(key.to_bytes())))
+                .collect(),
+        })
+    } else {
+        Err("Devnet is not running".to_string())
+    }
 }
 
 fn main() {
@@ -146,6 +164,7 @@ fn main() {
             get_devnet_logs,
             get_devnet_wallets,
             fork_network,
+            get_devnet_info, // Add this line
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

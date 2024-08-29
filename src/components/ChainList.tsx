@@ -399,8 +399,8 @@ const ChainList: React.FC = () => {
   )
 
   return (
-    <div className="container mx-auto flex flex-col h-screen py-4">
-      <h2 className="text-2xl font-bold mb-4">Chain List</h2>
+    <div className="container space-y-4">
+      <h2 className="text-2xl font-semibold mb-4">Chain List</h2>
       <div className="flex justify-between items-center mb-4">
         <Input
           type="text"

@@ -82,14 +82,14 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <ConnectKitProvider>
           <TooltipProvider>
-            <div className="flex h-screen bg-background">
+            <div className="flex h-screen bg-muted">
               <Sidebar
                 items={sidebarItems}
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
               />
 
-              <div className="flex-1 p-4 overflow-auto">
+              <div className="flex-1 p-4 overflow-auto bg-background rounded-t-2xl mx-3 mt-3">
                 <RPCTool
                   style={{
                     display: activeTab === 'rpcTool' ? 'block' : 'none',

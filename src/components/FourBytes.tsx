@@ -85,7 +85,9 @@ const FourBytes: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-bold mb-4">4bytes Tool (OpenChain API)</h2>
+      <h2 className="text-2xl font-semibold mb-4">
+        4bytes Tool (OpenChain API)
+      </h2>
       <div className="flex items-center space-x-2">
         <Checkbox
           id="filterJunk"

@@ -145,9 +145,7 @@ const WalletGenerator: React.FC = () => {
 
   return (
     <div className="container mx-auto space-y-4">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Wallet Generator</h1>
-      </div>
+      <h1 className="text-2xl font-semibold mb-4">Wallet Generator</h1>
       <div className="space-y-6">
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">

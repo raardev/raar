@@ -228,7 +228,7 @@ const TransactionTracer: React.FC = () => {
 
   return (
     <div className="container space-y-4">
-      <h1 className="text-2xl font-bold mb-6">Transaction Tracer</h1>
+      <h2 className="text-2xl font-semibold mb-4">Transaction Tracer</h2>
       <div className="space-y-6">
         <TransactionForm
           txHash={txHash}

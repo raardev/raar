@@ -83,7 +83,7 @@ const EthereumUnitConverter: React.FC = () => {
 
   return (
     <div className="container space-y-4">
-      <h2 className="text-2xl font-bold mb-6">Ethereum Unit Converter</h2>
+      <h2 className="text-2xl font-semibold mb-4">Ethereum Unit Converter</h2>
       <div className="space-y-4">
         {units.map((unit) => (
           <div key={unit} className="flex items-center space-x-3">

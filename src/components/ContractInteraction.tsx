@@ -161,7 +161,7 @@ const ContractInteraction: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-bold mb-4">Contract Interaction</h2>
+      <h2 className="text-2xl font-semibold mb-4">Contract Interaction</h2>
       <div className="flex space-x-2">
         <Input
           type="text"

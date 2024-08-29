@@ -226,7 +226,7 @@ const ContractMap: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-bold mb-4">Contract Map</h2>
+      <h2 className="text-2xl font-semibold mb-4">Contract Map</h2>
       <div className="flex space-x-2">
         <Input
           type="text"

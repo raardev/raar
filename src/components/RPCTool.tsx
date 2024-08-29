@@ -255,7 +255,7 @@ const RPCTool: React.FC<{ style?: React.CSSProperties }> = ({ style }) => {
 
   return (
     <div className="container space-y-4" style={style}>
-      <h2 className="text-2xl font-bold mb-4 w-full">RPC Tool</h2>
+      <h2 className="text-2xl font-semibold mb-4">RPC Client</h2>
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="flex items-center">
           <TabsList>
