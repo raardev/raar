@@ -82,12 +82,6 @@ const sidebarItems = [
     component: ContractInteraction,
   },
   {
-    id: 'contractMap',
-    label: 'Contract Map',
-    icon: GitBranchIcon,
-    component: ContractMap,
-  },
-  {
     id: 'fourBytes',
     label: '4bytes Decoder',
     icon: HashIcon,
@@ -98,6 +92,12 @@ const sidebarItems = [
     label: 'Gas Tracker',
     icon: GaugeIcon,
     component: MultiChainGasTracker,
+  },
+  {
+    id: 'contractMap',
+    label: 'Contract Map(Experimental)',
+    icon: GitBranchIcon,
+    component: ContractMap,
   },
 ]
 
