@@ -6,8 +6,8 @@ import ErrorBoundary from '@/components/ErrorBoundary'
 import EthereumUnitConverter from '@/components/EthereumUnitConverter'
 import FourBytes from '@/components/FourBytes'
 import MultiChainGasTracker from '@/components/MultiChainGasTracker'
-import RPCTool from '@/components/RPCTool'
 import Sidebar from '@/components/Sidebar'
+import ToolWrapper from '@/components/ToolWrapper'
 import TransactionTracer from '@/components/TransactionTracer'
 import WalletGenerator from '@/components/WalletGenerator'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -18,10 +18,10 @@ import {
   FileTextIcon,
   GaugeIcon,
   GitBranchIcon,
+  GitCommitIcon,
   HashIcon,
   ListIcon,
-  SearchXIcon,
-  ServerIcon,
+  TestTube2Icon,
   WalletIcon,
   ZapIcon,
 } from 'lucide-react'
@@ -30,53 +30,91 @@ import { Toaster } from 'sonner'
 import { mainnet } from 'viem/chains'
 import { WagmiProvider, createConfig } from 'wagmi'
 import './App.css'
-import ToolWrapper from '@/components/ToolWrapper'
+import RPCTool from './components/RPCTool'
 
 const config = createConfig(
   getDefaultConfig({
-    // Your dApps chains
     chains: [mainnet],
-
-    // Required API Keys
-    walletConnectProjectId: '927b0f2c5d6fdad04dac586d85e10cee', // raar.dev
-
-    // Required App Info
+    walletConnectProjectId: '927b0f2c5d6fdad04dac586d85e10cee',
     appName: 'RaaR',
-
-    // Optional App Info
     appDescription: 'Your App Description',
     appUrl: 'https://raar.dev',
-    appIcon: 'https://raar.dev/logo.png', // your app's icon, no bigger than 1024x1024px (max. 1MB)
+    appIcon: 'https://raar.dev/logo.png',
   }),
 )
 
 const sidebarItems = [
-  { id: 'rpcTool', label: 'RPC Tool', icon: ZapIcon },
-  { id: 'chainList', label: 'Chain List', icon: ListIcon },
-  { id: 'walletGenerator', label: 'Wallet Generator', icon: WalletIcon },
-  { id: 'ethUnitConverter', label: 'ETH Unit Converter', icon: CalculatorIcon },
-  { id: 'devnetTool', label: 'Devnet Tool', icon: ServerIcon },
+  { id: 'rpcClient', label: 'RPC Client', icon: ZapIcon, component: RPCTool },
+  {
+    id: 'transactionTracer',
+    label: 'Transaction Tracer',
+    icon: GitCommitIcon,
+    component: TransactionTracer,
+  },
+  {
+    id: 'chainList',
+    label: 'Chain List',
+    icon: ListIcon,
+    component: ChainList,
+  },
+  {
+    id: 'devnetTool',
+    label: 'Devnet',
+    icon: TestTube2Icon,
+    component: DevnetTool,
+  },
+  {
+    id: 'walletGenerator',
+    label: 'Wallet Generator',
+    icon: WalletIcon,
+    component: WalletGenerator,
+  },
+  {
+    id: 'ethUnitConverter',
+    label: 'Unit Converter',
+    icon: CalculatorIcon,
+    component: EthereumUnitConverter,
+  },
   {
     id: 'contractInteraction',
     label: 'Contract Interaction',
     icon: FileTextIcon,
+    component: ContractInteraction,
   },
-  { id: 'fourBytes', label: '4bytes Tool', icon: HashIcon },
-  { id: 'contractMap', label: 'Contract Map', icon: GitBranchIcon },
-  { id: 'multiChainGasTracker', label: 'Gas Tracker', icon: GaugeIcon },
-  { id: 'transactionTracer', label: 'Transaction Tracer', icon: SearchXIcon },
+  {
+    id: 'contractMap',
+    label: 'Contract Map',
+    icon: GitBranchIcon,
+    component: ContractMap,
+  },
+  {
+    id: 'fourBytes',
+    label: '4bytes Decoder',
+    icon: HashIcon,
+    component: FourBytes,
+  },
+  {
+    id: 'multiChainGasTracker',
+    label: 'Gas Tracker',
+    icon: GaugeIcon,
+    component: MultiChainGasTracker,
+  },
 ]
 
 const queryClient = new QueryClient()
 
 function App() {
   const [activeTab, setActiveTab] = useState(() => {
-    return localStorage.getItem('activeTab') || 'rpcTool'
+    return localStorage.getItem('activeTab') || 'rpcClient'
   })
 
   useEffect(() => {
     localStorage.setItem('activeTab', activeTab)
   }, [activeTab])
+
+  const ActiveComponent = sidebarItems.find(
+    (item) => item.id === activeTab,
+  )?.component
 
   return (
     <WagmiProvider config={config}>
@@ -91,57 +129,17 @@ function App() {
               />
 
               <div className="flex-1 p-4 overflow-auto bg-background rounded-t-2xl mx-3 mt-3">
-                {activeTab === 'rpcTool' && (
-                  <ToolWrapper title="RPC Tool">
-                    <RPCTool />
-                  </ToolWrapper>
-                )}
-                {activeTab === 'chainList' && (
+                {ActiveComponent && (
                   <ErrorBoundary>
-                    <ToolWrapper title="Chain List">
-                      <ChainList />
+                    <ToolWrapper
+                      title={
+                        sidebarItems.find((item) => item.id === activeTab)
+                          ?.label || ''
+                      }
+                    >
+                      <ActiveComponent />
                     </ToolWrapper>
                   </ErrorBoundary>
-                )}
-                {activeTab === 'walletGenerator' && (
-                  <ToolWrapper title="Wallet Generator">
-                    <WalletGenerator />
-                  </ToolWrapper>
-                )}
-                {activeTab === 'ethUnitConverter' && (
-                  <ToolWrapper title="ETH Unit Converter">
-                    <EthereumUnitConverter />
-                  </ToolWrapper>
-                )}
-                {activeTab === 'devnetTool' && (
-                  <ToolWrapper title="Devnet Tool">
-                    <DevnetTool />
-                  </ToolWrapper>
-                )}
-                {activeTab === 'contractInteraction' && (
-                  <ToolWrapper title="Contract Interaction">
-                    <ContractInteraction />
-                  </ToolWrapper>
-                )}
-                {activeTab === 'fourBytes' && (
-                  <ToolWrapper title="4bytes Tool">
-                    <FourBytes />
-                  </ToolWrapper>
-                )}
-                {activeTab === 'contractMap' && (
-                  <ToolWrapper title="Contract Map">
-                    <ContractMap />
-                  </ToolWrapper>
-                )}
-                {activeTab === 'multiChainGasTracker' && (
-                  <ToolWrapper title="Gas Tracker">
-                    <MultiChainGasTracker />
-                  </ToolWrapper>
-                )}
-                {activeTab === 'transactionTracer' && (
-                  <ToolWrapper title="Transaction Tracer">
-                    <TransactionTracer />
-                  </ToolWrapper>
                 )}
               </div>
               <Toaster richColors />

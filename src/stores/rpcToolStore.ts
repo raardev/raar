@@ -18,6 +18,7 @@ interface RPCToolState {
   activeTab: string
   addRequest: (request: RPCRequest) => void
   updateRequest: (id: string, updates: Partial<RPCRequest>) => void
+  removeRequest: (id: string) => void
   setActiveTab: (id: string) => void
 }
 
@@ -52,6 +53,30 @@ export const useRPCToolStore = create<RPCToolState>()(
             req.id === id ? { ...req, ...updates } : req,
           ),
         })),
+      removeRequest: (id) =>
+        set((state) => {
+          const newRequests = state.requests.filter((req) => req.id !== id)
+          let newActiveTab = state.activeTab
+
+          if (state.activeTab === id) {
+            const closedIndex = state.requests.findIndex((req) => req.id === id)
+            if (closedIndex < state.requests.length - 1) {
+              // If it's not the last tab, select the next one
+              newActiveTab = state.requests[closedIndex + 1].id
+            } else if (closedIndex > 0) {
+              // If it's the last tab, select the previous one
+              newActiveTab = state.requests[closedIndex - 1].id
+            } else {
+              // If it's the only tab, set to '1' or any default value
+              newActiveTab = '1'
+            }
+          }
+
+          return {
+            requests: newRequests,
+            activeTab: newActiveTab,
+          }
+        }),
       setActiveTab: (id) => set({ activeTab: id }),
     }),
     {

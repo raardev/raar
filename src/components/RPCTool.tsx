@@ -17,6 +17,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { commonMethods, defaultParams } from '@/config/rpcToolDefaults'
 import { useRPCToolStore } from '@/stores/rpcToolStore'
 import { json } from '@codemirror/lang-json'
 import { writeText } from '@tauri-apps/api/clipboard'
@@ -29,99 +30,46 @@ import {
   CopyIcon,
   DownloadIcon,
   FileJsonIcon,
+  Loader2Icon,
   PlusIcon,
   RefreshCwIcon,
+  XIcon,
 } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
-const commonMethods = [
-  'eth_blockNumber',
-  'eth_getBalance',
-  'eth_getTransactionCount',
-  'eth_getBlockByNumber',
-  'eth_getTransactionByHash',
-  'custom',
-]
-
-const defaultParams: Record<string, string> = {
-  eth_blockNumber: JSON.stringify(
-    {
-      jsonrpc: '2.0',
-      method: 'eth_blockNumber',
-      params: [],
-      id: 1,
-    },
-    null,
-    2,
-  ),
-  eth_getBalance: JSON.stringify(
-    {
-      jsonrpc: '2.0',
-      method: 'eth_getBalance',
-      params: ['0x742d35Cc6634C0532925a3b844Bc454e4438f44e', 'latest'],
-      id: 1,
-    },
-    null,
-    2,
-  ),
-  eth_getTransactionCount: JSON.stringify(
-    {
-      jsonrpc: '2.0',
-      method: 'eth_getTransactionCount',
-      params: ['0x742d35Cc6634C0532925a3b844Bc454e4438f44e', 'latest'],
-      id: 1,
-    },
-    null,
-    2,
-  ),
-  eth_getBlockByNumber: JSON.stringify(
-    {
-      jsonrpc: '2.0',
-      method: 'eth_getBlockByNumber',
-      params: ['0x1b4', true],
-      id: 1,
-    },
-    null,
-    2,
-  ),
-  eth_getTransactionByHash: JSON.stringify(
-    {
-      jsonrpc: '2.0',
-      method: 'eth_getTransactionByHash',
-      params: [
-        '0x88df016429689c079f3b2f6ad39fa052532c56795b733da78a91ebe6a713944b',
-      ],
-      id: 1,
-    },
-    null,
-    2,
-  ),
-  custom: JSON.stringify(
-    {
-      jsonrpc: '2.0',
-      method: 'method_name',
-      params: [],
-      id: 1,
-    },
-    null,
-    2,
-  ),
+interface RPCResponse {
+  status?: number
+  statusText?: string
+  error?: string
 }
 
 const RPCTool: React.FC = () => {
-  const { requests, activeTab, addRequest, updateRequest, setActiveTab } =
-    useRPCToolStore()
+  const {
+    requests,
+    activeTab,
+    addRequest,
+    updateRequest,
+    setActiveTab,
+    removeRequest,
+  } = useRPCToolStore()
+
+  // Add this check
+  useEffect(() => {
+    if (requests.length === 0) {
+      handleAddTab()
+    }
+  }, [requests])
+
   const [isLoading, setIsLoading] = useState(false)
   const [openPopover, setOpenPopover] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [convertedResponse, setConvertedResponse] = useState<string | null>(
-    null,
-  )
+  const [convertedResponse, setConvertedResponse] =
+    useState<RPCResponse | null>(null)
 
   const handleAddTab = () => {
     const newId = (
-      Math.max(...requests.map((req) => Number.parseInt(req.id))) + 1
+      Math.max(...requests.map((req) => Number.parseInt(req.id)), 0) + 1
     ).toString()
     addRequest({
       id: newId,
@@ -132,6 +80,11 @@ const RPCTool: React.FC = () => {
       latency: null,
     })
     setActiveTab(newId)
+  }
+
+  const handleCloseTab = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation()
+    removeRequest(id)
   }
 
   const handleMethodChange = useCallback(
@@ -154,8 +107,8 @@ const RPCTool: React.FC = () => {
     }
   }
 
-  const filteredMethods = commonMethods.filter((method) =>
-    method.toLowerCase().includes(searchTerm.toLowerCase()),
+  const filteredMethods = commonMethods.filter((rpcMethod) =>
+    rpcMethod.method.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
   const validateUrl = (url: string) => {
@@ -180,7 +133,7 @@ const RPCTool: React.FC = () => {
     return 'text-red-500'
   }
 
-  const downloadJson = async (data: any) => {
+  const downloadJson = async (data: RPCResponse) => {
     try {
       const jsonString = JSON.stringify(data, null, 2)
       const filePath = await save({
@@ -206,12 +159,14 @@ const RPCTool: React.FC = () => {
     }
   }
 
-  const convertHexToNumber = (obj: any): any => {
+  const convertHexToNumber = (obj: unknown): unknown => {
     if (typeof obj === 'string' && obj.startsWith('0x')) {
       return Number.parseInt(obj, 16)
-    } else if (Array.isArray(obj)) {
+    }
+    if (Array.isArray(obj)) {
       return obj.map(convertHexToNumber)
-    } else if (typeof obj === 'object' && obj !== null) {
+    }
+    if (typeof obj === 'object' && obj !== null) {
       return Object.fromEntries(
         Object.entries(obj).map(([key, value]) => [
           key,
@@ -259,8 +214,20 @@ const RPCTool: React.FC = () => {
         <div className="flex items-center">
           <TabsList>
             {requests.map((req) => (
-              <TabsTrigger key={req.id} value={req.id}>
+              <TabsTrigger
+                key={req.id}
+                value={req.id}
+                className="relative pr-8"
+              >
                 Request {req.id}
+                <Button
+                  onClick={(e) => handleCloseTab(e, req.id)}
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
+                >
+                  <XIcon className="h-3 w-3" />
+                </Button>
               </TabsTrigger>
             ))}
             <Button
@@ -295,6 +262,9 @@ const RPCTool: React.FC = () => {
                 onClick={() => sendRequest(req.id)}
                 disabled={isLoading || !validateUrl(req.rpcUrl)}
               >
+                {isLoading ? (
+                  <Loader2Icon className="h-4 w-4 animate-spin mr-2" />
+                ) : null}
                 Send
               </Button>
             </div>
@@ -351,14 +321,14 @@ const RPCTool: React.FC = () => {
                         onValueChange={setSearchTerm}
                       />
                       <CommandList>
-                        {filteredMethods.map((method) => (
+                        {filteredMethods.map((rpcMethod) => (
                           <CommandItem
-                            key={method}
-                            onSelect={() => handleMethodChange(req.id, method)}
+                            key={rpcMethod.method}
+                            onSelect={() => handleMethodChange(req.id, rpcMethod.method)}
                           >
                             <div className="flex items-center justify-between w-full">
-                              {method}
-                              {req.method === method && (
+                              {rpcMethod.method}
+                              {req.method === rpcMethod.method && (
                                 <CheckIcon className="h-4 w-4" />
                               )}
                             </div>
@@ -459,7 +429,7 @@ const RPCTool: React.FC = () => {
                               setConvertedResponse(null)
                             } else {
                               setConvertedResponse(
-                                convertHexToNumber(req.response),
+                                convertHexToNumber(req.response) as RPCResponse,
                               )
                             }
                           }}
