@@ -144,133 +144,130 @@ const WalletGenerator: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto space-y-4">
-      <h1 className="text-2xl font-semibold mb-4">Wallet Generator</h1>
-      <div className="space-y-6">
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="batchSize">Batch Size</Label>
-              <Input
-                id="batchSize"
-                type="number"
-                min="1"
-                value={batchSize}
-                onChange={(e) => setBatchSize(Number(e.target.value))}
-              />
-            </div>
-            <div>
-              <Label htmlFor="generationMethod">Generation Method</Label>
-              <Select
-                value={generationMethod}
-                onValueChange={(value) =>
-                  setGenerationMethod(value as 'mnemonic' | 'privateKey')
-                }
-              >
-                <SelectTrigger id="generationMethod">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="mnemonic">Mnemonic</SelectItem>
-                  <SelectItem value="privateKey">Private Key</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+    <div className="space-y-4">
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="batchSize">Batch Size</Label>
+            <Input
+              id="batchSize"
+              type="number"
+              min="1"
+              value={batchSize}
+              onChange={(e) => setBatchSize(Number(e.target.value))}
+            />
           </div>
-          {generationMethod === 'mnemonic' && (
-            <div>
-              <Label htmlFor="wordlist">Wordlist</Label>
-              <Select
-                value={selectedWordlist}
-                onValueChange={(value) =>
-                  setSelectedWordlist(value as keyof typeof wordlists)
-                }
-              >
-                <SelectTrigger id="wordlist">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.keys(wordlists).map((list) => (
-                    <SelectItem key={list} value={list}>
-                      {list}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-          <Button onClick={generateWallets} className="w-full">
-            Generate Wallets
-          </Button>
+          <div>
+            <Label htmlFor="generationMethod">Generation Method</Label>
+            <Select
+              value={generationMethod}
+              onValueChange={(value) =>
+                setGenerationMethod(value as 'mnemonic' | 'privateKey')
+              }
+            >
+              <SelectTrigger id="generationMethod">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="mnemonic">Mnemonic</SelectItem>
+                <SelectItem value="privateKey">Private Key</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        {generationMethod === 'mnemonic' && (
+          <div>
+            <Label htmlFor="wordlist">Wordlist</Label>
+            <Select
+              value={selectedWordlist}
+              onValueChange={(value) =>
+                setSelectedWordlist(value as keyof typeof wordlists)
+              }
+            >
+              <SelectTrigger id="wordlist">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.keys(wordlists).map((list) => (
+                  <SelectItem key={list} value={list}>
+                    {list}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        <Button onClick={generateWallets} className="w-full">
+          Generate Wallets
+        </Button>
+      </div>
+
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Manage Wallets</h3>
+        <div className="flex justify-between items-center">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="selectAll"
+              checked={selectAll}
+              onCheckedChange={toggleSelectAll}
+            />
+            <Label htmlFor="selectAll">Select All</Label>
+          </div>
+          <div className="space-x-2">
+            <Button
+              onClick={exportWallets}
+              disabled={wallets.filter((w) => w.selected).length === 0}
+            >
+              Export
+            </Button>
+            <Button
+              onClick={deleteSelectedWallets}
+              disabled={wallets.filter((w) => w.selected).length === 0}
+              variant="destructive"
+            >
+              Delete
+            </Button>
+          </div>
         </div>
 
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Manage Wallets</h3>
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="selectAll"
-                checked={selectAll}
-                onCheckedChange={toggleSelectAll}
-              />
-              <Label htmlFor="selectAll">Select All</Label>
-            </div>
-            <div className="space-x-2">
-              <Button
-                onClick={exportWallets}
-                disabled={wallets.filter((w) => w.selected).length === 0}
-              >
-                Export
-              </Button>
-              <Button
-                onClick={deleteSelectedWallets}
-                disabled={wallets.filter((w) => w.selected).length === 0}
-                variant="destructive"
-              >
-                Delete
-              </Button>
-            </div>
+        {wallets.length === 0 ? (
+          <p className="text-center text-muted-foreground">
+            No wallets generated yet. Use the form above to create some.
+          </p>
+        ) : (
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {wallets.map((wallet, index) => (
+              <Card key={index}>
+                <CardContent className="p-4 flex items-start space-x-4">
+                  <Checkbox
+                    checked={wallet.selected}
+                    onCheckedChange={() => toggleWalletSelection(index)}
+                  />
+                  <div className="flex-grow">
+                    <p className="font-semibold">Address: {wallet.address}</p>
+                    {wallet.privateKey && (
+                      <p className="text-sm text-muted-foreground truncate">
+                        Private Key: {wallet.privateKey}
+                      </p>
+                    )}
+                    {wallet.mnemonic && (
+                      <p className="text-sm text-muted-foreground truncate">
+                        Mnemonic: {wallet.mnemonic}
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => deleteWallet(index)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-
-          {wallets.length === 0 ? (
-            <p className="text-center text-muted-foreground">
-              No wallets generated yet. Use the form above to create some.
-            </p>
-          ) : (
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {wallets.map((wallet, index) => (
-                <Card key={index}>
-                  <CardContent className="p-4 flex items-start space-x-4">
-                    <Checkbox
-                      checked={wallet.selected}
-                      onCheckedChange={() => toggleWalletSelection(index)}
-                    />
-                    <div className="flex-grow">
-                      <p className="font-semibold">Address: {wallet.address}</p>
-                      {wallet.privateKey && (
-                        <p className="text-sm text-muted-foreground truncate">
-                          Private Key: {wallet.privateKey}
-                        </p>
-                      )}
-                      {wallet.mnemonic && (
-                        <p className="text-sm text-muted-foreground truncate">
-                          Mnemonic: {wallet.mnemonic}
-                        </p>
-                      )}
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => deleteWallet(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
+        )}
       </div>
     </div>
   )

@@ -106,8 +106,7 @@ const DevnetTool: React.FC = () => {
   }
 
   return (
-    <div className="container space-y-4">
-      <h2 className="text-2xl font-semibold mb-4">Devnet</h2>
+    <div className="space-y-4">
       <div className="flex space-x-2">
         <Button onClick={isRunning ? stopDevnet : startDevnet}>
           {isRunning ? (

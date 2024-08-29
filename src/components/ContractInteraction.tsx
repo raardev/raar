@@ -161,28 +161,15 @@ const ContractInteraction: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-semibold mb-4">Contract Interaction</h2>
       <div className="flex space-x-2">
         <Input
-          type="text"
+          placeholder="Contract Address"
           value={address}
           onChange={(e) => setAddress(e.target.value)}
-          placeholder="Enter contract address"
         />
         <Button onClick={fetchABI} disabled={isFetchingAbi}>
-          {isFetchingAbi ? 'Fetching...' : 'Fetch ABI'}
+          {isFetchingAbi ? 'Loading...' : 'Load Contract'}
         </Button>
-      </div>
-      <div className="flex space-x-2">
-        {demoAddresses.map((demoAddress) => (
-          <Button
-            key={demoAddress.address}
-            onClick={() => setAddress(demoAddress.address)}
-            variant="outline"
-          >
-            {demoAddress.name}
-          </Button>
-        ))}
       </div>
       {resolvedAddress && resolvedAddress !== address && (
         <p>Resolved to: {resolvedAddress}</p>

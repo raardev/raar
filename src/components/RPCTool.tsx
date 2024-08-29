@@ -109,7 +109,7 @@ const defaultParams: Record<string, string> = {
   ),
 }
 
-const RPCTool: React.FC<{ style?: React.CSSProperties }> = ({ style }) => {
+const RPCTool: React.FC = () => {
   const { requests, activeTab, addRequest, updateRequest, setActiveTab } =
     useRPCToolStore()
   const [isLoading, setIsLoading] = useState(false)
@@ -254,8 +254,7 @@ const RPCTool: React.FC<{ style?: React.CSSProperties }> = ({ style }) => {
   }
 
   return (
-    <div className="container space-y-4" style={style}>
-      <h2 className="text-2xl font-semibold mb-4">RPC Client</h2>
+    <div className="space-y-4">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="flex items-center">
           <TabsList>

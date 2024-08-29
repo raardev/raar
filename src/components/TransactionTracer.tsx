@@ -16,6 +16,8 @@ import CallTraceVisualization from './CallTraceVisualization'
 import ChangesList from './ChangesList'
 import TransactionForm from './TransactionForm'
 import TransactionInfoCard from './TransactionInfoCard'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
 
 const TransactionTracer: React.FC = () => {
   const {
@@ -227,8 +229,15 @@ const TransactionTracer: React.FC = () => {
   }
 
   return (
-    <div className="container space-y-4">
-      <h2 className="text-2xl font-semibold mb-4">Transaction Tracer</h2>
+    <div className="space-y-4">
+      <div className="flex space-x-2">
+        <Input
+          placeholder="Enter transaction hash"
+          value={txHash}
+          onChange={(e) => setTxHash(e.target.value)}
+        />
+        <Button onClick={traceTransaction}>Trace</Button>
+      </div>
       <div className="space-y-6">
         <TransactionForm
           txHash={txHash}

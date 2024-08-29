@@ -399,17 +399,13 @@ const ChainList: React.FC = () => {
   )
 
   return (
-    <div className="container space-y-4">
-      <h2 className="text-2xl font-semibold mb-4">Chain List</h2>
-      <div className="flex justify-between items-center mb-4">
-        <Input
-          type="text"
-          placeholder="Search by chain name or ID"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
-        />
-      </div>
+    <div className="space-y-4">
+      <Input
+        type="text"
+        placeholder="Search by chain name or ID"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
       <div className="flex-grow overflow-hidden">
         <VirtualizedDataTable columns={columns} data={filteredChains} />
       </div>

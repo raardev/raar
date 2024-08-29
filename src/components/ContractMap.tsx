@@ -226,18 +226,14 @@ const ContractMap: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-semibold mb-4">Contract Map</h2>
-      <div className="flex space-x-2">
-        <Input
-          type="text"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          placeholder="Enter contract address"
-        />
-        <Button onClick={fetchSourceCode} disabled={isLoading}>
-          {isLoading ? 'Fetching...' : 'Fetch and Map'}
-        </Button>
-      </div>
+      <Input
+        placeholder="Enter contract address"
+        value={address}
+        onChange={(e) => setAddress(e.target.value)}
+      />
+      <Button onClick={fetchSourceCode} disabled={isLoading}>
+        {isLoading ? 'Fetching...' : 'Fetch and Map'}
+      </Button>
       <div style={{ width: '100%', height: '800px', border: '1px solid #ccc' }}>
         <ReactFlow
           nodes={nodes}

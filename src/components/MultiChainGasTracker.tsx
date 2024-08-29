@@ -1,4 +1,3 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -100,20 +99,17 @@ const MultiChainGasTracker: React.FC = () => {
   }, [fetchGasPrices])
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>Multi Chain Gas Tracker</CardTitle>
-        <div className="flex justify-between items-center">
-          <p className="text-sm text-muted-foreground">
-            Last updated: {lastUpdated.toLocaleTimeString()}
-          </p>
-          <RefreshCountdown
-            interval={REFRESH_INTERVAL}
-            onRefresh={fetchGasPrices}
-          />
-        </div>
-      </CardHeader>
-      <CardContent>
+    <div className="w-full">
+      <div className="flex justify-between items-center">
+        <p className="text-sm text-muted-foreground">
+          Last updated: {lastUpdated.toLocaleTimeString()}
+        </p>
+        <RefreshCountdown
+          interval={REFRESH_INTERVAL}
+          onRefresh={fetchGasPrices}
+        />
+      </div>
+      <div>
         <Table>
           <TableHeader>
             <TableRow>
@@ -152,8 +148,8 @@ const MultiChainGasTracker: React.FC = () => {
             </BarChart>
           </ResponsiveContainer>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
 

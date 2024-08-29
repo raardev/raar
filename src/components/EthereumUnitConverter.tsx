@@ -82,37 +82,34 @@ const EthereumUnitConverter: React.FC = () => {
   }
 
   return (
-    <div className="container space-y-4">
-      <h2 className="text-2xl font-semibold mb-4">Ethereum Unit Converter</h2>
-      <div className="space-y-4">
-        {units.map((unit) => (
-          <div key={unit} className="flex items-center space-x-3">
-            <div className="flex-grow relative">
-              <Input
-                type="text"
-                value={values[unit]}
-                onChange={(e) => handleInputChange(unit, e.target.value)}
-                placeholder={`Enter ${unit}`}
-                className="pr-10"
-              />
-              <button
-                onClick={() => copyToClipboard(unit, values[unit])}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {copiedUnit === unit ? (
-                  <CheckIcon className="h-5 w-5" />
-                ) : (
-                  <CopyIcon className="h-5 w-5" />
-                )}
-              </button>
-            </div>
-            <div className="w-32 text-left">
-              <span className="text-gray-600 font-medium">{unit}</span>
-              <span className="text-sm text-gray-500 ml-1">{`(10^${unitDecimals[unit]})`}</span>
-            </div>
+    <div className="space-y-4">
+      {units.map((unit) => (
+        <div key={unit} className="flex items-center space-x-3">
+          <div className="flex-grow relative">
+            <Input
+              type="text"
+              value={values[unit]}
+              onChange={(e) => handleInputChange(unit, e.target.value)}
+              placeholder={`Enter ${unit}`}
+              className="pr-10"
+            />
+            <button
+              onClick={() => copyToClipboard(unit, values[unit])}
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              {copiedUnit === unit ? (
+                <CheckIcon className="h-5 w-5" />
+              ) : (
+                <CopyIcon className="h-5 w-5" />
+              )}
+            </button>
           </div>
-        ))}
-      </div>
+          <div className="w-32 text-left">
+            <span className="text-gray-600 font-medium">{unit}</span>
+            <span className="text-sm text-gray-500 ml-1">{`(10^${unitDecimals[unit]})`}</span>
+          </div>
+        </div>
+      ))}
     </div>
   )
 }

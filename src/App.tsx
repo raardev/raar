@@ -30,6 +30,7 @@ import { Toaster } from 'sonner'
 import { mainnet } from 'viem/chains'
 import { WagmiProvider, createConfig } from 'wagmi'
 import './App.css'
+import ToolWrapper from '@/components/ToolWrapper'
 
 const config = createConfig(
   getDefaultConfig({
@@ -90,26 +91,58 @@ function App() {
               />
 
               <div className="flex-1 p-4 overflow-auto bg-background rounded-t-2xl mx-3 mt-3">
-                <RPCTool
-                  style={{
-                    display: activeTab === 'rpcTool' ? 'block' : 'none',
-                  }}
-                />
+                {activeTab === 'rpcTool' && (
+                  <ToolWrapper title="RPC Tool">
+                    <RPCTool />
+                  </ToolWrapper>
+                )}
                 {activeTab === 'chainList' && (
                   <ErrorBoundary>
-                    <ChainList />
+                    <ToolWrapper title="Chain List">
+                      <ChainList />
+                    </ToolWrapper>
                   </ErrorBoundary>
-                )}{' '}
-                {activeTab === 'walletGenerator' && <WalletGenerator />}
-                {activeTab === 'ethUnitConverter' && <EthereumUnitConverter />}
-                {activeTab === 'devnetTool' && <DevnetTool />}
-                {activeTab === 'contractInteraction' && <ContractInteraction />}
-                {activeTab === 'fourBytes' && <FourBytes />}
-                {activeTab === 'contractMap' && <ContractMap />}
-                {activeTab === 'multiChainGasTracker' && (
-                  <MultiChainGasTracker />
                 )}
-                {activeTab === 'transactionTracer' && <TransactionTracer />}
+                {activeTab === 'walletGenerator' && (
+                  <ToolWrapper title="Wallet Generator">
+                    <WalletGenerator />
+                  </ToolWrapper>
+                )}
+                {activeTab === 'ethUnitConverter' && (
+                  <ToolWrapper title="ETH Unit Converter">
+                    <EthereumUnitConverter />
+                  </ToolWrapper>
+                )}
+                {activeTab === 'devnetTool' && (
+                  <ToolWrapper title="Devnet Tool">
+                    <DevnetTool />
+                  </ToolWrapper>
+                )}
+                {activeTab === 'contractInteraction' && (
+                  <ToolWrapper title="Contract Interaction">
+                    <ContractInteraction />
+                  </ToolWrapper>
+                )}
+                {activeTab === 'fourBytes' && (
+                  <ToolWrapper title="4bytes Tool">
+                    <FourBytes />
+                  </ToolWrapper>
+                )}
+                {activeTab === 'contractMap' && (
+                  <ToolWrapper title="Contract Map">
+                    <ContractMap />
+                  </ToolWrapper>
+                )}
+                {activeTab === 'multiChainGasTracker' && (
+                  <ToolWrapper title="Gas Tracker">
+                    <MultiChainGasTracker />
+                  </ToolWrapper>
+                )}
+                {activeTab === 'transactionTracer' && (
+                  <ToolWrapper title="Transaction Tracer">
+                    <TransactionTracer />
+                  </ToolWrapper>
+                )}
               </div>
               <Toaster richColors />
             </div>
