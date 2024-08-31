@@ -1,8 +1,8 @@
 [package]
 name = "raar"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "Raar"
+authors = ["daoleno"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -11,7 +11,9 @@ edition = "2021"
 tauri-build = { version = "1", features = [] }
 
 [dependencies]
-tauri = { version = "1", features = [ "shell-open", "shell-execute",
+tauri = { version = "1", features = [
+    "shell-open",
+    "shell-execute",
     "clipboard-write-text",
     "fs-all",
     "dialog-save",
