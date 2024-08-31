@@ -41,9 +41,10 @@ const CustomNode: React.FC<CustomNodeProps> = ({ data }) => {
     }
   }
 
+  // Safely log the functions, handling the case where data.functions might be undefined
   console.log(
     `Node ${data.name} functions:`,
-    data.functions.map((f: Function) => f.name),
+    data.functions?.map((f: Function) => f.name) ?? 'No functions',
   )
 
   return (
@@ -59,40 +60,48 @@ const CustomNode: React.FC<CustomNodeProps> = ({ data }) => {
       </div>
       <div className="mt-2">
         <div className="font-semibold">Functions:</div>
-        {data.functions.map((func: Function, index: number) => (
-          <div
-            key={func.name}
-            className={`text-sm ${getVisibilityColor(func.visibility)}`}
-          >
-            {func.name}
-            {func.isConstructor
-              ? ' (constructor)'
-              : `(${func.visibility} ${func.stateMutability})`}
-            <Handle
-              type="target"
-              position={Position.Left}
-              id={`${data.name}-${func.name}-target`}
-              style={{ left: '-8px', top: `${20 + index * 24}px` }}
-            />
-            <Handle
-              type="source"
-              position={Position.Right}
-              id={`${data.name}-${func.name}-source`}
-              style={{ right: '-8px', top: `${20 + index * 24}px` }}
-            />
-          </div>
-        ))}
+        {data.functions && data.functions.length > 0 ? (
+          data.functions.map((func: Function, index: number) => (
+            <div
+              key={func.name}
+              className={`text-sm ${getVisibilityColor(func.visibility)}`}
+            >
+              {func.name}
+              {func.isConstructor
+                ? ' (constructor)'
+                : `(${func.visibility} ${func.stateMutability})`}
+              <Handle
+                type="target"
+                position={Position.Left}
+                id={`${data.name}-${func.name}-target`}
+                style={{ left: '-8px', top: `${20 + index * 24}px` }}
+              />
+              <Handle
+                type="source"
+                position={Position.Right}
+                id={`${data.name}-${func.name}-source`}
+                style={{ right: '-8px', top: `${20 + index * 24}px` }}
+              />
+            </div>
+          ))
+        ) : (
+          <div className="text-sm text-gray-500">No functions</div>
+        )}
       </div>
       <div className="mt-2">
         <div className="font-semibold">Variables:</div>
-        {data.variables.map((variable: Variable) => (
-          <div
-            key={variable.name}
-            className={`text-sm ${getVisibilityColor(variable.visibility)}`}
-          >
-            {variable.name}: {variable.typeName} ({variable.visibility})
-          </div>
-        ))}
+        {data.variables && data.variables.length > 0 ? (
+          data.variables.map((variable: Variable) => (
+            <div
+              key={variable.name}
+              className={`text-sm ${getVisibilityColor(variable.visibility)}`}
+            >
+              {variable.name}: {variable.typeName} ({variable.visibility})
+            </div>
+          ))
+        ) : (
+          <div className="text-sm text-gray-500">No variables</div>
+        )}
       </div>
       <Handle
         type="source"

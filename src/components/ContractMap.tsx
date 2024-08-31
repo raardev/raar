@@ -127,14 +127,20 @@ const ContractMap: React.FC = () => {
               },
               VariableDeclaration: (varNode) => {
                 if (varNode.isStateVar) {
+                  let typeName = ''
+                  if (varNode.typeName) {
+                    parser.visit(varNode.typeName, {
+                      ElementaryTypeName: (node) => {
+                        typeName = node.name
+                      },
+                      UserDefinedTypeName: (node) => {
+                        typeName = node.namePath
+                      },
+                    })
+                  }
                   element.variables.push({
-                    name: varNode.name ?? 'unnamed',
-                    typeName:
-                      // @ts-ignore
-                      parser.visit(varNode.typeName, {
-                        ElementaryTypeName: (node) => node.name,
-                        UserDefinedTypeName: (node) => node.namePath,
-                      }) ?? 'unknown',
+                    name: varNode.name || '',
+                    typeName: typeName,
                     visibility: varNode.visibility || 'internal',
                   })
                 }
@@ -150,6 +156,7 @@ const ContractMap: React.FC = () => {
       }
     })
 
+    // Filter out non-existent base contracts
     // biome-ignore lint/complexity/noForEach: <explanation>
     elements.forEach((element) => {
       element.inherits = element.inherits.filter((base) => contractMap[base])
@@ -171,10 +178,11 @@ const ContractMap: React.FC = () => {
         newNodes.push({
           id: element.name,
           position: { x, y },
-          data: { element }, // Wrap the element in an object
+          data: element as unknown as Record<string, unknown>,
           type: 'contractNode',
         })
 
+        // Inheritance edges
         // biome-ignore lint/complexity/noForEach: <explanation>
         element.inherits.forEach((baseContract) => {
           if (contractNames.has(baseContract)) {
@@ -190,34 +198,23 @@ const ContractMap: React.FC = () => {
           }
         })
 
+        // Function call edges
         // biome-ignore lint/complexity/noForEach: <explanation>
         element.functionCalls.forEach((call) => {
           if (contractNames.has(call.toContract)) {
-            const targetElement = elements.find(
-              (e) => e.name === call.toContract,
-            )
-            if (targetElement?.functions.some((f) => f.name === call.to)) {
-              newEdges.push({
-                id: `${element.name}-${call.from}-calls-${call.toContract}-${call.to}`,
-                source: element.name,
-                target: call.toContract,
-                sourceHandle: `${element.name}-${call.from}-source`,
-                targetHandle: `${call.toContract}-${call.to}-target`,
-                type: 'smoothstep',
-                animated: false,
-                style: { stroke: '#0000ff' },
-                label: 'calls',
-              })
-            }
+            newEdges.push({
+              id: `${element.name}-${call.from}-calls-${call.toContract}-${call.to}`,
+              source: element.name,
+              target: call.toContract,
+              sourceHandle: `${element.name}-${call.from}-source`,
+              targetHandle: `${call.toContract}-${call.to}-target`,
+              type: 'smoothstep',
+              animated: false,
+              style: { stroke: '#0000ff' },
+              label: 'calls',
+            })
           }
         })
-      })
-
-      // biome-ignore lint/complexity/noForEach: <explanation>
-      newEdges.forEach((edge) => {
-        console.log(
-          `Edge: ${edge.id}, Source: ${edge.source}, Target: ${edge.target}, SourceHandle: ${edge.sourceHandle}, TargetHandle: ${edge.targetHandle}`,
-        )
       })
 
       setNodes(newNodes)
