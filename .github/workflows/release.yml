@@ -3,7 +3,7 @@ name: 'publish'
 on:
   push:
     tags:
-      - 'v*'
+      - '*.*.*'
 
 jobs:
   publish-tauri:
@@ -36,13 +36,24 @@ jobs:
       - name: install frontend dependencies
         run: bun install
 
+      - name: Read changelog
+        id: changelog
+        run: |
+          CHANGELOG=$(awk '/^## \['"${GITHUB_REF#refs/tags/}"'\]/, /^## \[/ {if (!/^## \[/) print}' CHANGELOG.md)
+          echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'RaaR ${{ github.ref_name }}'
-          releaseBody: 'See the assets to download this version and install.'
+          releaseBody: |
+            See the assets to download this version and install.
+
+            ${{ steps.changelog.outputs.CHANGELOG }}
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
