@@ -27,6 +27,11 @@ jobs:
         with:
           node-version: lts/*
 
+      - name: setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
