@@ -44,7 +44,10 @@ jobs:
       - name: Read changelog
         id: changelog
         run: |
-          CHANGELOG=$(awk '/^## \['"${GITHUB_REF#refs/tags/}"'\]/, /^## \[/ {if (!/^## \[/) print}' CHANGELOG.md)
+          echo "Extracting changelog for version ${GITHUB_REF#refs/tags/}"
+          CHANGELOG=$(sed -n "/## \[${GITHUB_REF#refs/tags/}\]/,/## \[/p" CHANGELOG.md | sed '$d')
+          echo "Extracted changelog:"
+          echo "$CHANGELOG"
           echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
           echo "$CHANGELOG" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
