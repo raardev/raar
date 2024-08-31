@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react'
-import { VariableSizeList as List } from 'react-window'
+import type React from 'react'
+import { useMemo } from 'react'
 import AutoSizer from 'react-virtualized-auto-sizer'
+import { VariableSizeList as List } from 'react-window'
 
 interface VirtualizedListProps<T> {
   items: T[]
@@ -18,7 +19,10 @@ export function VirtualizedList<T>({
   const itemCount = items.length
   const totalHeight = Math.min(itemCount * estimatedItemHeight, maxHeight)
 
-  const getItemSize = useMemo(() => () => estimatedItemHeight, [estimatedItemHeight])
+  const getItemSize = useMemo(
+    () => () => estimatedItemHeight,
+    [estimatedItemHeight],
+  )
 
   return (
     <div style={{ height: totalHeight }}>
@@ -31,9 +35,7 @@ export function VirtualizedList<T>({
             width={width}
           >
             {({ index, style }) => (
-              <div style={style}>
-                {renderItem(items[index], index)}
-              </div>
+              <div style={style}>{renderItem(items[index], index)}</div>
             )}
           </List>
         )}
