@@ -11,11 +11,10 @@ edition = "2021"
 tauri-build = { version = "1", features = [] }
 
 [dependencies]
-tauri = { version = "1", features = [
+tauri = { version = "1", features = [ "shell-open", "shell-execute",
     "clipboard-write-text",
     "fs-all",
     "dialog-save",
-    "shell-open",
 ] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

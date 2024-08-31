@@ -29,12 +29,14 @@ const DevnetTool: React.FC = () => {
   const [devnetInfo, setDevnetInfo] = useState<DevnetInfo | null>(null)
   const [isForking, setIsForking] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [isStarting, setIsStarting] = useState(false)
 
   const fetchDevnetInfo = useCallback(async () => {
     try {
       const info = (await invoke('get_devnet_info')) as DevnetInfo
       setDevnetInfo(info)
       setIsRunning(true)
+      setErrorMessage(null)
     } catch (error) {
       console.error('Failed to fetch devnet info:', error)
       setDevnetInfo(null)
@@ -52,17 +54,15 @@ const DevnetTool: React.FC = () => {
   }, [])
 
   useEffect(() => {
-    const fetchData = async () => {
-      await fetchDevnetInfo()
+    if (isRunning) {
+      const interval = setInterval(fetchDevnetInfo, 1000)
+      return () => clearInterval(interval)
     }
-
-    fetchData()
-    const interval = setInterval(fetchData, 1000)
-
-    return () => clearInterval(interval)
-  }, [fetchDevnetInfo])
+  }, [isRunning, fetchDevnetInfo])
 
   const startDevnet = async () => {
+    setIsStarting(true)
+    setErrorMessage(null)
     try {
       const info = (await invoke('start_devnet')) as DevnetInfo
       setDevnetInfo(info)
@@ -70,7 +70,10 @@ const DevnetTool: React.FC = () => {
       toast.success('Devnet started successfully')
     } catch (error) {
       console.error('Failed to start devnet:', error)
-      toast.error('Failed to start devnet')
+      setErrorMessage(String(error))
+      toast.error(`Failed to start devnet: ${error}`)
+    } finally {
+      setIsStarting(false)
     }
   }
 
@@ -98,7 +101,6 @@ const DevnetTool: React.FC = () => {
       console.error('Failed to fork network:', error)
       setErrorMessage(String(error))
       toast.error(`Failed to fork network: ${error}`)
-      setIsRunning(false)
     } finally {
       setIsForking(false)
       setShowForkInput(false)
@@ -108,8 +110,16 @@ const DevnetTool: React.FC = () => {
   return (
     <div className="space-y-4">
       <div className="flex space-x-2">
-        <Button onClick={isRunning ? stopDevnet : startDevnet}>
-          {isRunning ? (
+        <Button
+          onClick={isRunning ? stopDevnet : startDevnet}
+          disabled={isStarting}
+        >
+          {isStarting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Starting...
+            </>
+          ) : isRunning ? (
             <>
               <StopCircleIcon className="mr-2 h-4 w-4" />
               Stop Devnet
@@ -153,7 +163,7 @@ const DevnetTool: React.FC = () => {
             <CardTitle className="text-red-500">Error</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-red-500">{errorMessage}</p>
+            <p className="text-red-500 whitespace-pre-wrap">{errorMessage}</p>
           </CardContent>
         </Card>
       )}

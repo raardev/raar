@@ -1,8 +1,8 @@
 # RaaR
 
-Open-Source, Local-First Swiss Army Knife for Ethereum Development
+An Open-Source, Local-First Swiss Army Knife for Crypto Development
 
-RaaR is a desktop application built with Tauri, React, and TypeScript, designed to provide a suite of tools for Ethereum developers and blockchain enthusiasts.
+RaaR is a desktop application built with Tauri, React, and TypeScript, designed to provide a suite of tools for crypto developers and blockchain enthusiasts.
 
 ## Features
 

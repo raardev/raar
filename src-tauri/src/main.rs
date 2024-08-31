@@ -6,7 +6,10 @@ use alloy::{
     node_bindings::anvil::{Anvil, AnvilInstance},
 };
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use std::sync::Arc;
+use tauri::api::path::home_dir;
+use tauri::Manager;
 use tokio::sync::Mutex;
 
 struct DevnetState {
@@ -14,7 +17,7 @@ struct DevnetState {
     logs: Arc<Mutex<Vec<String>>>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct DevnetInfo {
     rpc_url: String,
     chain_id: u64,
@@ -23,17 +26,46 @@ struct DevnetInfo {
     private_keys: Vec<String>,
 }
 
+fn find_anvil() -> Option<PathBuf> {
+    let home = home_dir()?;
+    let possible_paths = vec![
+        home.join(".foundry/bin/anvil"),
+        // PathBuf::from("/usr/local/bin/anvil"),
+        // PathBuf::from("/usr/bin/anvil"),
+    ];
+
+    for path in possible_paths {
+        if path.exists() {
+            return Some(path);
+        }
+    }
+
+    None
+}
+
 #[tauri::command]
 async fn start_devnet(
     state: tauri::State<'_, Arc<Mutex<DevnetState>>>,
+    app: tauri::AppHandle,
 ) -> Result<DevnetInfo, String> {
     let mut state = state.lock().await;
     if state.instance.is_some() {
         return Err("Devnet is already running".to_string());
     }
 
+    // Find Anvil
+    let anvil_path = find_anvil().ok_or_else(|| {
+        "Anvil not found. Please ensure Foundry is installed and Anvil is in your PATH.".to_string()
+    })?;
+
     // Spawn Anvil
-    let instance = Anvil::new().spawn();
+    let instance = match Anvil::at(anvil_path).try_spawn() {
+        Ok(inst) => inst,
+        Err(e) => {
+            let msg = format!("Failed to spawn Anvil instance: {}", e);
+            return Err(msg);
+        }
+    };
 
     let devnet_info = DevnetInfo {
         rpc_url: instance.endpoint(),
@@ -156,6 +188,14 @@ fn main() {
     }));
 
     tauri::Builder::default()
+        .setup(|app| {
+            #[cfg(debug_assertions)]
+            {
+                let window = app.get_window("main").unwrap();
+                window.open_devtools();
+            }
+            Ok(())
+        })
         .manage(devnet_state)
         .invoke_handler(tauri::generate_handler![
             start_devnet,
@@ -164,7 +204,7 @@ fn main() {
             get_devnet_logs,
             get_devnet_wallets,
             fork_network,
-            get_devnet_info, // Add this line
+            get_devnet_info,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
