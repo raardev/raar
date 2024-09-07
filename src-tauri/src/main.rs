@@ -5,6 +5,8 @@ use alloy::{
     hex,
     node_bindings::anvil::{Anvil, AnvilInstance},
 };
+use env_logger::Builder;
+use log::{info, LevelFilter};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -181,11 +183,56 @@ async fn get_devnet_info(
     }
 }
 
+mod indexer;
+
+use indexer::{IndexerState, IndexerTool, IndexerOptions};
+
+#[tauri::command]
+async fn start_indexing(
+    path: String,
+    dataset: String,
+    options: IndexerOptions,
+    indexer: tauri::State<'_, Arc<IndexerTool>>,
+) -> Result<(), String> {
+    indexer.start_indexing(path.into(), dataset, options).await
+}
+
+#[tauri::command]
+async fn get_indexer_state(
+    indexer: tauri::State<'_, Arc<IndexerTool>>,
+) -> Result<IndexerState, String> {
+    Ok(indexer.get_state().await)
+}
+
+#[tauri::command]
+async fn set_selected_dataset(
+    dataset: String,
+    indexer: tauri::State<'_, Arc<IndexerTool>>,
+) -> Result<(), String> {
+    indexer.set_selected_dataset(dataset).await
+}
+
+#[tauri::command]
+async fn get_available_datasets(
+    indexer: tauri::State<'_, Arc<IndexerTool>>,
+) -> Result<Vec<String>, String> {
+    Ok(indexer.get_available_datasets().await)
+}
+
 fn main() {
+    Builder::new()
+        .filter_level(LevelFilter::Debug)
+        .format_timestamp(None)
+        .init();
+
+    info!("Starting application");
+
     let devnet_state = Arc::new(Mutex::new(DevnetState {
         instance: None,
         logs: Arc::new(Mutex::new(Vec::new())),
     }));
+
+    let indexer = Arc::new(IndexerTool::new());
 
     tauri::Builder::default()
         .setup(|app| {
@@ -197,6 +244,7 @@ fn main() {
             Ok(())
         })
         .manage(devnet_state)
+        .manage(indexer)
         .invoke_handler(tauri::generate_handler![
             start_devnet,
             stop_devnet,
@@ -205,6 +253,10 @@ fn main() {
             get_devnet_wallets,
             fork_network,
             get_devnet_info,
+            start_indexing,
+            get_indexer_state,
+            set_selected_dataset,
+            get_available_datasets,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

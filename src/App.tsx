@@ -24,6 +24,7 @@ import {
   TestTube2Icon,
   WalletIcon,
   ZapIcon,
+  DatabaseIcon,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Toaster } from 'sonner'
@@ -31,6 +32,7 @@ import { mainnet } from 'viem/chains'
 import { WagmiProvider, createConfig } from 'wagmi'
 import './App.css'
 import RPCTool from './components/RPCTool'
+import IndexerTool from './components/IndexerTool'
 
 const config = createConfig(
   getDefaultConfig({
@@ -98,6 +100,12 @@ const sidebarItems = [
     label: 'Contract Map(Experimental)',
     icon: GitBranchIcon,
     component: ContractMap,
+  },
+  {
+    id: 'indexerTool',
+    label: 'Indexer Tool',
+    icon: DatabaseIcon,
+    component: IndexerTool,
   },
 ]
 

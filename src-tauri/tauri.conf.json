@@ -18,6 +18,7 @@
         "open": true
       },
       "dialog": {
+        "open": true,
         "save": true
       },
       "fs": {
