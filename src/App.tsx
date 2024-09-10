@@ -21,18 +21,18 @@ import {
   GitCommitIcon,
   HashIcon,
   ListIcon,
+  PickaxeIcon,
   TestTube2Icon,
   WalletIcon,
   ZapIcon,
-  DatabaseIcon,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Toaster } from 'sonner'
 import { mainnet } from 'viem/chains'
 import { WagmiProvider, createConfig } from 'wagmi'
 import './App.css'
+import ChainExtractor from './components/ChainExtractor'
 import RPCTool from './components/RPCTool'
-import IndexerTool from './components/IndexerTool'
 
 const config = createConfig(
   getDefaultConfig({
@@ -52,6 +52,12 @@ const sidebarItems = [
     label: 'Transaction Tracer',
     icon: GitCommitIcon,
     component: TransactionTracer,
+  },
+  {
+    id: 'chainExtractor',
+    label: 'Chain Extractor',
+    icon: PickaxeIcon,
+    component: ChainExtractor,
   },
   {
     id: 'chainList',
@@ -100,12 +106,6 @@ const sidebarItems = [
     label: 'Contract Map(Experimental)',
     icon: GitBranchIcon,
     component: ContractMap,
-  },
-  {
-    id: 'indexerTool',
-    label: 'Indexer Tool',
-    icon: DatabaseIcon,
-    component: IndexerTool,
   },
 ]
 

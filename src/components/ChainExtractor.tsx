@@ -79,7 +79,7 @@ interface CompactFreezeSummary {
   rows_written: number
 }
 
-const IndexerTool: React.FC = () => {
+const ChainExtractor: React.FC = () => {
   const [indexerState, setIndexerState] = useState<IndexerState | null>(null)
   const [availableDatasets, setAvailableDatasets] = useState<string[]>([])
   const [selectedDataset, setSelectedDataset] = useState<string | null>(null)
@@ -185,7 +185,9 @@ const IndexerTool: React.FC = () => {
           <Label htmlFor="rpc">RPC URL</Label>
           <RPCInput
             value={options.rpc}
-            onChange={(value) => setOptions((prev) => ({ ...prev, rpc: value }))}
+            onChange={(value) =>
+              setOptions((prev) => ({ ...prev, rpc: value }))
+            }
             placeholder="Enter RPC URL"
           />
         </div>
@@ -241,9 +243,7 @@ const IndexerTool: React.FC = () => {
         <div className="flex justify-end space-x-2">
           <Dialog>
             <DialogTrigger asChild>
-              <Button variant="outline">
-                Settings
-              </Button>
+              <Button variant="outline">Settings</Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
@@ -464,7 +464,9 @@ const IndexerTool: React.FC = () => {
                 <p
                   key={`log-${index}-${message.substring(0, 10)}`}
                   className={`mb-1 ${
-                    message.startsWith('Error:') ? 'text-red-600 font-semibold' : ''
+                    message.startsWith('Error:')
+                      ? 'text-red-600 font-semibold'
+                      : ''
                   }`}
                 >
                   {message}
@@ -501,4 +503,4 @@ const IndexerTool: React.FC = () => {
   )
 }
 
-export default IndexerTool
+export default ChainExtractor
