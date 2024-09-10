@@ -185,7 +185,7 @@ async fn get_devnet_info(
 
 mod indexer;
 
-use indexer::{IndexerState, IndexerTool, IndexerOptions};
+use indexer::{CompactFreezeSummary, IndexerOptions, IndexerState, IndexerTool};
 
 #[tauri::command]
 async fn start_indexing(
@@ -193,7 +193,7 @@ async fn start_indexing(
     dataset: String,
     options: IndexerOptions,
     indexer: tauri::State<'_, Arc<IndexerTool>>,
-) -> Result<(), String> {
+) -> Result<CompactFreezeSummary, String> {
     indexer.start_indexing(path.into(), dataset, options).await
 }
 
@@ -217,6 +217,20 @@ async fn get_available_datasets(
     indexer: tauri::State<'_, Arc<IndexerTool>>,
 ) -> Result<Vec<String>, String> {
     Ok(indexer.get_available_datasets().await)
+}
+
+#[tauri::command]
+async fn subscribe_to_indexer_logs(
+    indexer: tauri::State<'_, Arc<IndexerTool>>,
+    window: tauri::Window,
+) -> Result<(), String> {
+    let mut rx = indexer.subscribe_to_logs();
+    tokio::spawn(async move {
+        while let Ok(log) = rx.recv().await {
+            let _ = window.emit("indexer-log", log);
+        }
+    });
+    Ok(())
 }
 
 fn main() {
@@ -257,6 +271,7 @@ fn main() {
             get_indexer_state,
             set_selected_dataset,
             get_available_datasets,
+            subscribe_to_indexer_logs,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

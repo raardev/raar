@@ -1,8 +1,10 @@
 use cryo_cli::{run, Args};
-use log::{debug, error, info};
+use cryo_freeze::FreezeSummary;
+use log::{debug, error, info, Level, LevelFilter, Metadata, Record};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Arc;
+use tokio::sync::broadcast;
 use tokio::sync::Mutex;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -41,27 +43,30 @@ pub struct IndexerOptions {
 
 pub struct IndexerTool {
     state: Arc<Mutex<IndexerState>>,
+    log_sender: broadcast::Sender<String>,
 }
 
 impl IndexerTool {
     pub fn new() -> Self {
-        IndexerTool {
-            state: Arc::new(Mutex::new(IndexerState {
-                indexing_progress: 0.0,
-                log_messages: Vec::new(),
-                available_datasets: vec![
-                    "blocks".to_string(),
-                    "transactions".to_string(),
-                    "traces".to_string(),
-                    "logs".to_string(),
-                    "contracts".to_string(),
-                ],
-                selected_dataset: None,
-                summary: None,
-                indexed_dirs: Vec::new(),
-                indexed_files: Vec::new(),
-            })),
-        }
+        let (log_sender, _) = broadcast::channel(100);
+
+        let state = Arc::new(Mutex::new(IndexerState {
+            indexing_progress: 0.0,
+            log_messages: Vec::new(),
+            available_datasets: vec![
+                "blocks".to_string(),
+                "transactions".to_string(),
+                "traces".to_string(),
+                "logs".to_string(),
+                "contracts".to_string(),
+            ],
+            selected_dataset: None,
+            summary: None,
+            indexed_dirs: Vec::new(),
+            indexed_files: Vec::new(),
+        }));
+
+        IndexerTool { state, log_sender }
     }
 
     pub async fn start_indexing(
@@ -69,11 +74,11 @@ impl IndexerTool {
         path: PathBuf,
         dataset: String,
         options: IndexerOptions,
-    ) -> Result<(), String> {
-        info!(
-            "Starting indexing for dataset: {} at path: {:?}",
-            dataset, path
-        );
+    ) -> Result<CompactFreezeSummary, String> {
+        log::set_max_level(LevelFilter::Info);
+
+        info!(target: "cryo", "Starting indexing for dataset: {} at path: {:?}", dataset, path);
+
         let mut state = self.state.lock().await;
         state.selected_dataset = Some(dataset.clone());
         state.indexing_progress = 0.0;
@@ -84,25 +89,37 @@ impl IndexerTool {
         drop(state);
 
         let args = self.create_args(&path, &dataset, &options)?;
-        debug!("Created args: {:?}", args);
+        debug!(target: "cryo", "Created args: {:?}", args);
 
         // Run the indexing process
-        info!("Running indexing process");
-        let result = run(args).await.map_err(|e| {
-            error!("Indexing error: {}", e);
-            e.to_string()
-        })?;
+        info!(target: "cryo", "Running indexing process");
+        let result = run(args).await;
 
-        let mut state = self.state.lock().await;
-        state.summary = result.map(|summary| {
-            let summary_str = format!("{:?}", summary);
-            info!("Indexing completed. Summary: {}", summary_str);
-            summary_str
-        });
-        state.indexing_progress = 100.0;
-        state.log_messages.push("Indexing completed.".to_string());
-
-        Ok(())
+        match result {
+            Ok(Some(summary)) => {
+                let compact_summary = CompactFreezeSummary::from(summary);
+                let mut state = self.state.lock().await;
+                state.summary = Some(format!("{:?}", compact_summary));
+                state.indexing_progress = 100.0;
+                state
+                    .log_messages
+                    .push("Indexing completed successfully.".to_string());
+                Ok(compact_summary)
+            }
+            Ok(None) => {
+                let mut state = self.state.lock().await;
+                state
+                    .log_messages
+                    .push("Indexing completed, but no summary was produced.".to_string());
+                Err("No summary produced".to_string())
+            }
+            Err(e) => {
+                error!(target: "cryo", "Indexing error: {}", e);
+                let mut state = self.state.lock().await;
+                state.log_messages.push(format!("Error: {}", e));
+                Err(e.to_string())
+            }
+        }
     }
 
     fn create_args(
@@ -154,7 +171,7 @@ impl IndexerTool {
         args.json = options.format == "json";
         args.verbose = true;
 
-        // 设置默认值
+        // Set default values
         args.compression = vec!["lz4".to_string()];
         args.initial_backoff = 500;
         args.no_stats = false;
@@ -179,5 +196,50 @@ impl IndexerTool {
 
     pub async fn get_available_datasets(&self) -> Vec<String> {
         self.state.lock().await.available_datasets.clone()
+    }
+
+    pub fn subscribe_to_logs(&self) -> broadcast::Receiver<String> {
+        self.log_sender.subscribe()
+    }
+}
+
+struct CryoLogger {
+    sender: broadcast::Sender<String>,
+}
+
+impl log::Log for CryoLogger {
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        metadata.level() <= Level::Info
+    }
+
+    fn log(&self, record: &Record) {
+        if self.enabled(record.metadata()) {
+            let log_message = format!("{}: {}", record.level(), record.args());
+            let _ = self.sender.send(log_message);
+        }
+    }
+
+    fn flush(&self) {}
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct CompactFreezeSummary {
+    completed_chunks: usize,
+    skipped_chunks: usize,
+    errored_chunks: usize,
+    total_chunks: usize,
+    rows_written: u64,
+}
+
+impl From<FreezeSummary> for CompactFreezeSummary {
+    fn from(summary: FreezeSummary) -> Self {
+        let total_chunks = summary.completed.len() + summary.skipped.len() + summary.errored.len();
+        CompactFreezeSummary {
+            completed_chunks: summary.completed.len(),
+            skipped_chunks: summary.skipped.len(),
+            errored_chunks: summary.errored.len(),
+            total_chunks,
+            rows_written: summary.n_rows,
+        }
     }
 }
