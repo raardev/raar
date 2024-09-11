@@ -6,7 +6,7 @@ use alloy::{
     node_bindings::anvil::{Anvil, AnvilInstance},
 };
 use env_logger::Builder;
-use log::{info, LevelFilter};
+use log::{error, info, LevelFilter};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -233,6 +233,19 @@ async fn subscribe_to_indexer_logs(
     Ok(())
 }
 
+mod chain_analyzer;
+
+use chain_analyzer::{execute_query, DataFrameResult};
+
+#[tauri::command]
+fn execute_query_command(query: String) -> Result<DataFrameResult, String> {
+    info!("Executing query command");
+    execute_query(&query).map_err(|e| {
+        error!("Query execution failed: {}", e);
+        format!("Query execution failed: {}", e)
+    })
+}
+
 fn main() {
     Builder::new()
         .filter_level(LevelFilter::Debug)
@@ -272,6 +285,7 @@ fn main() {
             set_selected_dataset,
             get_available_datasets,
             subscribe_to_indexer_logs,
+            execute_query_command,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

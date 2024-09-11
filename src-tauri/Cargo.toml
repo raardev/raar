@@ -19,14 +19,19 @@ tauri = { version = "1", features = [
     "fs-all",
     "dialog-save",
 ] }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 tokio = { version = "1", features = ["full", "sync"] }
 alloy = { version = "0.2.1", features = ["node-bindings"] }
 cryo_freeze = "0.3.2"
 cryo_cli = "0.3.2"
 log = "0.4"
 env_logger = "0.10"
+duckdb = { version = "1.0.0", features = ["bundled", "polars"] }
+base64 = "0.21.0"
+polars = { version = "0.35.4", features = ["lazy"] }
+polars-core = { version = "0.35.4" }
+hex = "0.4.3"
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!

@@ -14,6 +14,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ConnectKitProvider, getDefaultConfig } from 'connectkit'
 import {
+  BarChartIcon,
   CalculatorIcon,
   FileTextIcon,
   GaugeIcon,
@@ -31,6 +32,7 @@ import { Toaster } from 'sonner'
 import { mainnet } from 'viem/chains'
 import { WagmiProvider, createConfig } from 'wagmi'
 import './App.css'
+import ChainAnalyzer from './components/ChainAnalyzer'
 import ChainExtractor from './components/ChainExtractor'
 import RPCTool from './components/RPCTool'
 
@@ -58,6 +60,12 @@ const sidebarItems = [
     label: 'Chain Extractor',
     icon: PickaxeIcon,
     component: ChainExtractor,
+  },
+  {
+    id: 'chainAnalyzer',
+    label: 'Chain Analyzer',
+    icon: BarChartIcon,
+    component: ChainAnalyzer,
   },
   {
     id: 'chainList',
