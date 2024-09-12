@@ -1,4 +1,12 @@
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -8,7 +16,6 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Tooltip as UITooltip } from '@/components/ui/tooltip'
 import { useChainAnalyzerStore } from '@/stores/chainAnalyzerStore'
 import { sql } from '@codemirror/lang-sql'
 import { open } from '@tauri-apps/api/dialog'
@@ -16,16 +23,18 @@ import { readDir } from '@tauri-apps/api/fs'
 import { invoke } from '@tauri-apps/api/tauri'
 import CodeMirror from '@uiw/react-codemirror'
 import {
-  BarChart2,
+  Clock,
   Download,
-  Eye,
+  FileDigitIcon,
   FileIcon,
   FileJson,
   FileSpreadsheet,
   FolderOpen,
+  Loader2,
   Play,
+  Search,
 } from 'lucide-react'
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   Area,
   AreaChart,
@@ -62,6 +71,10 @@ const ChainAnalyzer: React.FC = () => {
     chartType,
     setChartType,
   } = useChainAnalyzerStore()
+  const [searchTerm, setSearchTerm] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+
+  console.log('query result', queryResult)
 
   const selectDirectory = async () => {
     const selected = await open({
@@ -97,6 +110,7 @@ const ChainAnalyzer: React.FC = () => {
     }
 
     setQueryError(null)
+    setIsLoading(true)
     const startTime = performance.now()
 
     try {
@@ -113,13 +127,21 @@ const ChainAnalyzer: React.FC = () => {
       const result: DataFrameResult = await invoke('execute_query_command', {
         query: modifiedQuery,
       })
-      setQueryResult(result)
-      setQueryTime(performance.now() - startTime)
+
+      if (result.schema.length === 0 && result.data.length === 0) {
+        setQueryResult(null)
+        setQueryError('Query returned no results.')
+      } else {
+        setQueryResult(result)
+        setQueryTime(performance.now() - startTime)
+      }
     } catch (error) {
       console.error('Query execution error:', error)
       setQueryError(`Query execution failed: ${error}`)
       setQueryResult(null)
       toast.error(`Query execution failed: ${error}`)
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -146,45 +168,54 @@ const ChainAnalyzer: React.FC = () => {
     ].join('\n')
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
-    if (link.download !== undefined) {
-      const url = URL.createObjectURL(blob)
-      link.setAttribute('href', url)
-      link.setAttribute('download', 'query_results.csv')
-      link.style.visibility = 'hidden'
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-    }
+    link.setAttribute('href', url)
+    link.setAttribute('download', 'query_results.csv')
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
   }
 
-  const renderTable = (data: DataFrameResult) => (
-    <Table className="text-xs">
-      <TableHeader>
-        <TableRow>
-          {data.schema.map(([column, type]: [string, string]) => (
-            <TableHead key={column} title={type} className="font-semibold py-2">
-              {column}
-            </TableHead>
-          ))}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {data.data.map((row: string[], rowIndex: number) => (
-          <TableRow key={`row-${row.join('-')}`}>
-            {row.map((cell: string, cellIndex: number) => (
-              <TableCell
-                key={`cell-${row.join('-')}-${cellIndex}`}
-                className="py-1"
+  const renderTable = (data: DataFrameResult) => {
+    if (!data || !data.schema || !data.data) {
+      return <div>No data available</div>
+    }
+
+    return (
+      <Table className="text-xs">
+        <TableHeader>
+          <TableRow>
+            {data.schema.map(([column, type]: [string, string]) => (
+              <TableHead
+                key={column}
+                title={type}
+                className="font-semibold py-2"
               >
-                {cell}
-              </TableCell>
+                {column}
+              </TableHead>
             ))}
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  )
+        </TableHeader>
+        <TableBody>
+          {data.data.map((row: string[], rowIndex: number) => (
+            <TableRow key={row.join('-')}>
+              {row.map((cell: string, cellIndex: number) => (
+                <TableCell
+                  key={`${row.join('-')}-${data.schema[cellIndex][0]}`}
+                  className="py-1"
+                >
+                  {cell}
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    )
+  }
 
   const renderChart = () => {
     if (!queryResult) return null
@@ -243,7 +274,7 @@ const ChainAnalyzer: React.FC = () => {
     const extension = fileName.split('.').pop()?.toLowerCase()
     switch (extension) {
       case 'parquet':
-        return <BarChart2 size={16} />
+        return <FileDigitIcon size={16} />
       case 'csv':
         return <FileSpreadsheet size={16} />
       case 'json':
@@ -253,123 +284,153 @@ const ChainAnalyzer: React.FC = () => {
     }
   }
 
+  const handleFileClick = async (file: FileInfo) => {
+    setSelectedFile(file.path)
+    await previewFile(file.path)
+  }
+
   return (
-    <div className="flex h-full">
-      <div className="w-1/5 p-2 border-r overflow-auto">
-        <Button onClick={selectDirectory} className="w-full mb-2 text-xs">
-          <FolderOpen className="mr-2 h-3 w-3" />
-          Select Directory
-        </Button>
-        <div className="space-y-1">
-          {files.map((file: FileInfo) => (
-            <UITooltip key={file.path} title={file.name}>
+    <div className="flex h-screen overflow-hidden">
+      <div className="w-64 border-r border-gray-200 flex flex-col px-3">
+        <div className="py-4 border-b border-gray-200">
+          <div className="relative mb-2">
+            <Search
+              className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400"
+              size={16}
+            />
+            <Input
+              className="pl-8 pr-10 w-full"
+              placeholder="Search files..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <Button
+              onClick={selectDirectory}
+              className="absolute right-1 top-1/2 transform -translate-y-1/2 p-1"
+              variant="ghost"
+            >
+              <FolderOpen className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-auto">
+          {files
+            .filter((file) =>
+              file.name.toLowerCase().includes(searchTerm.toLowerCase()),
+            )
+            .map((file: FileInfo) => (
               <div
-                className={`flex items-center justify-between p-1 rounded cursor-pointer ${
+                key={file.path}
+                className={`flex items-center p-2 cursor-pointer ${
                   selectedFile === file.path
                     ? 'bg-blue-100'
                     : 'hover:bg-gray-100'
                 }`}
-                onClick={() => setSelectedFile(file.path)}
+                onClick={() => handleFileClick(file)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
-                    setSelectedFile(file.path)
+                    handleFileClick(file)
                   }
                 }}
-                role="button"
                 tabIndex={0}
+                role="button"
+                title={file.name}
               >
-                <div className="flex items-center flex-grow mr-2">
-                  <span className="mr-2">{getFileIcon(file.name)}</span>
-                  <span className="truncate text-xs">{file.name}</span>
-                </div>
-                <Eye
-                  className="h-3 w-3 text-gray-500 hover:text-blue-500 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    previewFile(file.path)
-                  }}
-                />
+                <span className="mr-2">{getFileIcon(file.name)}</span>
+                <span className="truncate text-xs">{file.name}</span>
               </div>
-            </UITooltip>
-          ))}
+            ))}
         </div>
       </div>
-      <div className="flex-1 p-4 space-y-4 overflow-auto">
-        <div className="border rounded p-2">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="border-b border-gray-200 p-4">
           <CodeMirror
             value={sqlQuery}
             height="150px"
             extensions={[sql()]}
             onChange={(value) => setSqlQuery(value)}
           />
-        </div>
-        <div className="flex justify-between items-center">
-          <Button onClick={executeQuery} className="text-xs">
-            <Play className="mr-2 h-3 w-3" />
-            Execute Query
-          </Button>
-          {queryTime !== null && (
-            <span className="text-xs">
-              Query Time: {queryTime.toFixed(2)}ms
-            </span>
-          )}
-          {queryResult && (
-            <Button onClick={downloadResults} className="text-xs">
-              <Download className="mr-2 h-3 w-3" />
-              Download Results
+          <div className="flex justify-between items-center mt-2">
+            <Button
+              onClick={executeQuery}
+              className="text-xs"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                <>
+                  <Play className="mr-2 h-3 w-3" />
+                  Execute Query
+                </>
+              )}
             </Button>
-          )}
-        </div>
-
-        {queryError && (
-          <div className="text-red-500 p-2 border border-red-300 rounded bg-red-50 text-xs">
-            {queryError}
-          </div>
-        )}
-
-        {queryResult && (
-          <div className="space-y-4">
-            <Tabs defaultValue="table">
-              <TabsList>
-                <TabsTrigger value="table">Table</TabsTrigger>
-                <TabsTrigger value="chart">Chart</TabsTrigger>
-              </TabsList>
-              <TabsContent value="table">
-                {renderTable(queryResult)}
-              </TabsContent>
-              <TabsContent value="chart">
-                <div className="flex items-center space-x-2 text-xs mb-2">
-                  <span>Chart Type:</span>
-                  <select
-                    value={chartType}
-                    onChange={(e) =>
-                      setChartType(e.target.value as 'bar' | 'line' | 'area')
-                    }
-                    className="border rounded p-1 text-xs"
-                  >
-                    <option value="bar">Bar Chart</option>
-                    <option value="line">Line Chart</option>
-                    <option value="area">Area Chart</option>
-                  </select>
-                </div>
-                <div className="h-[300px]">{renderChart()}</div>
-              </TabsContent>
-            </Tabs>
-            <div className="text-xs">
-              <h4 className="font-semibold">Query Result Information:</h4>
-              <p>Number of rows: {queryResult.data.length}</p>
-              <p>Number of columns: {queryResult.schema.length}</p>
-              <p>
-                Column names:{' '}
-                {queryResult.schema.map(([name]) => name).join(', ')}
-              </p>
-              <p>
-                Data types:{' '}
-                {queryResult.schema.map(([_, type]) => type).join(', ')}
-              </p>
+            <div className="flex items-center text-xs">
+              {queryResult && (
+                <Button onClick={downloadResults} size="icon" variant="ghost">
+                  <Download className="h-4 w-4" />
+                </Button>
+              )}
+              {queryTime !== null && (
+                <span className="flex items-center">
+                  <Clock className="mr-2 h-4 w-4" />
+                  {queryTime.toFixed(2)}ms
+                </span>
+              )}
             </div>
           </div>
-        )}
+        </div>
+        <div className="flex-1 overflow-hidden">
+          {queryError && (
+            <div className="text-red-500 p-2 border border-red-300 rounded bg-red-50 text-xs m-4">
+              {queryError}
+            </div>
+          )}
+          {queryResult && (
+            <div className="h-full flex flex-col">
+              <Tabs defaultValue="table" className="flex-1 flex flex-col">
+                <div className="px-4 border-b border-gray-200">
+                  <TabsList>
+                    <TabsTrigger value="table">Table</TabsTrigger>
+                    <TabsTrigger value="chart">Chart</TabsTrigger>
+                  </TabsList>
+                </div>
+                <TabsContent value="table" className="flex-1 overflow-auto p-4">
+                  {renderTable(queryResult)}
+                </TabsContent>
+                <TabsContent value="chart" className="flex-1 overflow-auto p-4">
+                  <div className="flex items-center space-x-2 text-xs mb-2">
+                    <span>Chart Type:</span>
+                    <Select
+                      value={chartType}
+                      onValueChange={(value) =>
+                        setChartType(value as 'bar' | 'line' | 'area')
+                      }
+                    >
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Select a chart type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="bar">Bar Chart</SelectItem>
+                        <SelectItem value="line">Line Chart</SelectItem>
+                        <SelectItem value="area">Area Chart</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="h-[300px]">{renderChart()}</div>
+                </TabsContent>
+              </Tabs>
+            </div>
+          )}
+          {!queryResult && !queryError && (
+            <div className="text-center text-gray-500 mt-8">
+              No query results to display. Select a file or execute a query.
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

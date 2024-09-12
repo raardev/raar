@@ -19,7 +19,18 @@ pub fn execute_query(query: &str) -> Result<DataFrameResult> {
 
     // Use query_polars to get a Polars DataFrame
     let pl = stmt.query_polars([])?;
-    let df = accumulate_dataframes_vertical_unchecked(pl);
+
+    // Check if the query result is empty
+    let df_vec: Vec<DataFrame> = pl.collect();
+    if df_vec.is_empty() {
+        // Return an empty result instead of panicking
+        return Ok(DataFrameResult {
+            schema: vec![],
+            data: vec![],
+        });
+    }
+
+    let df = accumulate_dataframes_vertical_unchecked(df_vec);
 
     info!("DataFrame: {:?}", df);
 
@@ -42,5 +53,15 @@ pub fn execute_query(query: &str) -> Result<DataFrameResult> {
         })
         .collect();
 
-    Ok(DataFrameResult { schema, data })
+    // Transpose the data matrix
+    let transposed_data: Vec<Vec<String>> = (0..data[0].len())
+        .map(|i| data.iter().map(|row| row[i].clone()).collect())
+        .collect();
+
+    info!("Transposed data: {:?}", transposed_data);
+
+    Ok(DataFrameResult {
+        schema,
+        data: transposed_data,
+    })
 }
