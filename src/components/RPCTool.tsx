@@ -54,14 +54,15 @@ const RPCTool: React.FC = () => {
     removeRequest,
   } = useRPCToolStore()
 
-  // Add this check
   useEffect(() => {
     if (requests.length === 0) {
       handleAddTab()
     }
   }, [requests])
 
-  const [isLoading, setIsLoading] = useState(false)
+  const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>(
+    {},
+  )
   const [openPopover, setOpenPopover] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [convertedResponse, setConvertedResponse] =
@@ -178,33 +179,34 @@ const RPCTool: React.FC = () => {
   }
 
   const sendRequest = async (id: string) => {
-    setIsLoading(true)
+    setLoadingStates((prev) => ({ ...prev, [id]: true }))
     const request = requests.find((req) => req.id === id)
     if (!request) return
 
     try {
       const startTime = Date.now()
-      const parsedParams = JSON.parse(request.params)
       const res = await fetch(request.rpcUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 1,
-          method: request.method,
-          params: parsedParams.params,
-        }),
+        body: request.params, // Use the exact input from the params field
       })
       const endTime = Date.now()
       const data = await res.json()
-      updateRequest(id, { response: data, latency: endTime - startTime })
+      updateRequest(id, {
+        response: data,
+        latency: endTime - startTime,
+        status: res.status,
+        statusText: res.statusText,
+      })
     } catch (error) {
       updateRequest(id, {
-        response: { status: 500, statusText: (error as Error).message },
+        response: { error: (error as Error).message },
         latency: null,
+        status: 500,
+        statusText: 'Request Failed',
       })
     } finally {
-      setIsLoading(false)
+      setLoadingStates((prev) => ({ ...prev, [id]: false }))
     }
   }
 
@@ -252,9 +254,9 @@ const RPCTool: React.FC = () => {
               />
               <Button
                 onClick={() => sendRequest(req.id)}
-                disabled={isLoading || !validateUrl(req.rpcUrl)}
+                disabled={loadingStates[req.id] || !validateUrl(req.rpcUrl)}
               >
-                {isLoading ? (
+                {loadingStates[req.id] ? (
                   <Loader2Icon className="h-4 w-4 animate-spin mr-2" />
                 ) : null}
                 Send
@@ -340,25 +342,27 @@ const RPCTool: React.FC = () => {
                   <span>
                     Status:{' '}
                     <span
-                      className={`${getStatusColor(req.response.status || 200)} font-medium`}
+                      className={`${getStatusColor(req.status || 200)} font-medium`}
                     >
-                      {req.response.status || 200}
+                      {req.status || 200}
                     </span>{' '}
                     •{' '}
                     <span
-                      className={`${getStatusColor(req.response.status || 200)} font-medium`}
+                      className={`${getStatusColor(req.status || 200)} font-medium`}
                     >
-                      {req.response.statusText || 'OK'}
+                      {req.statusText || 'OK'}
                     </span>
                   </span>
-                  <span>
-                    Time:{' '}
-                    <span
-                      className={`${getLatencyColor(req.latency || 0)} font-medium`}
-                    >
-                      {req.latency || 0} ms
+                  {req.latency !== null && (
+                    <span>
+                      Time:{' '}
+                      <span
+                        className={`${getLatencyColor(req.latency)} font-medium`}
+                      >
+                        {req.latency} ms
+                      </span>
                     </span>
-                  </span>
+                  )}
                   <span>
                     Size:{' '}
                     <span className="text-purple-500 font-medium">

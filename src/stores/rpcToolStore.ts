@@ -9,8 +9,12 @@ interface RPCRequest {
   response: {
     status?: number
     statusText?: string
+    error?: string
+    result?: any
   } | null
   latency: number | null
+  status?: number
+  statusText?: string
 }
 
 interface RPCToolState {
