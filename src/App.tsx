@@ -14,6 +14,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ConnectKitProvider, getDefaultConfig } from 'connectkit'
 import {
+  ActivityIcon,
   BarChartIcon,
   CalculatorIcon,
   FileTextIcon,
@@ -35,6 +36,7 @@ import './App.css'
 import ChainAnalyzer from './components/ChainAnalyzer'
 import ChainExtractor from './components/ChainExtractor'
 import RPCTool from './components/RPCTool'
+import TransactionPool from './components/TransactionPool'
 
 const config = createConfig(
   getDefaultConfig({
@@ -54,6 +56,12 @@ const sidebarItems = [
     label: 'Transaction Tracer',
     icon: GitCommitIcon,
     component: TransactionTracer,
+  },
+  {
+    id: 'transactionPool',
+    label: 'Transaction Pool',
+    icon: ActivityIcon,
+    component: TransactionPool,
   },
   {
     id: 'chainExtractor',

@@ -31,16 +31,23 @@ export function VirtualizedDataTable<TData, TValue>({
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: React.useCallback(() => 35, []), // Adjust this value for row height
-    overscan: 10,
+    estimateSize: React.useCallback(() => 35, []),
+    overscan: 20, // Increased overscan for better performance
   })
 
   const virtualRows = virtualizer.getVirtualItems()
 
   const totalSize = columns.reduce(
-    (acc, column) => acc + ((column as any).size || 0),
+    (acc, column) => acc + ((column as { size?: number }).size || 0),
     0,
   )
+
+  const paddingTop = virtualRows.length > 0 ? virtualRows?.[0]?.start || 0 : 0
+  const paddingBottom =
+    virtualRows.length > 0
+      ? virtualizer.getTotalSize() -
+        (virtualRows?.[virtualRows.length - 1]?.end || 0)
+      : 0
 
   return (
     <div ref={parentRef} className={`overflow-auto h-full ${className}`}>
@@ -50,7 +57,10 @@ export function VirtualizedDataTable<TData, TValue>({
       >
         <colgroup>
           {columns.map((column, index) => (
-            <col key={index} style={{ width: (column as any).size }} />
+            <col
+              key={index}
+              style={{ width: (column as { size?: number }).size }}
+            />
           ))}
         </colgroup>
         <thead className="sticky top-0 bg-background z-10">
@@ -73,6 +83,11 @@ export function VirtualizedDataTable<TData, TValue>({
           ))}
         </thead>
         <tbody>
+          {paddingTop > 0 && (
+            <tr>
+              <td style={{ height: `${paddingTop}px` }} />
+            </tr>
+          )}
           {virtualRows.map((virtualRow) => {
             const row = rows[virtualRow.index]
             return (
@@ -88,6 +103,11 @@ export function VirtualizedDataTable<TData, TValue>({
               </tr>
             )
           })}
+          {paddingBottom > 0 && (
+            <tr>
+              <td style={{ height: `${paddingBottom}px` }} />
+            </tr>
+          )}
         </tbody>
       </table>
     </div>
