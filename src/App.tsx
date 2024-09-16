@@ -37,6 +37,7 @@ import ChainAnalyzer from './components/ChainAnalyzer'
 import ChainExtractor from './components/ChainExtractor'
 import RPCTool from './components/RPCTool'
 import TransactionPool from './components/TransactionPool'
+import HexConverter from './components/HexConverter'
 
 const config = createConfig(
   getDefaultConfig({
@@ -122,6 +123,12 @@ const sidebarItems = [
     label: 'Contract Map(Experimental)',
     icon: GitBranchIcon,
     component: ContractMap,
+  },
+  {
+    id: 'hexConverter',
+    label: 'Hex Converter',
+    icon: HashIcon,
+    component: HexConverter,
   },
 ]
 
