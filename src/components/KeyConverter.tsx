@@ -25,27 +25,23 @@ function KeyConverter() {
   const calculateResults = (startIndex: number, count: number) => {
     if (input.trim().split(/\s+/).length > 1) {
       // Mnemonic logic
-      const hdAccount = mnemonicToAccount(input)
-      const hdKey = hdAccount.getHdKey()
       const newResults = []
       for (let i = startIndex; i < startIndex + count; i++) {
+        const account = mnemonicToAccount(input, { addressIndex: i })
         const hdPath = `m/44'/60'/0'/0/${i}`
-        const derivedKey = hdKey.derive(hdPath)
-        const privateKey = derivedKey.privateKey
-          ? toHex(derivedKey.privateKey)
-          : ''
-        const account = privateKeyToAccount(privateKey as `0x${string}`)
-        newResults.push({ address: account.address, privateKey, hdPath })
+        const privateKey = toHex(account.getHdKey().privateKey!)
+        newResults.push({
+          address: account.address,
+          privateKey,
+          hdPath,
+        })
       }
       return newResults
-    } else {
-      // Private key logic (unchanged)
-      const privateKey = input.startsWith('0x') ? input : `0x${input}`
-      const account = privateKeyToAccount(privateKey as `0x${string}`)
-      return [
-        { address: account.address, privateKey: privateKey, hdPath: 'N/A' },
-      ]
     }
+    // Private key logic (unchanged)
+    const privateKey = input.startsWith('0x') ? input : `0x${input}`
+    const account = privateKeyToAccount(privateKey as `0x${string}`)
+    return [{ address: account.address, privateKey: privateKey, hdPath: 'N/A' }]
   }
 
   const handleConvert = async () => {
