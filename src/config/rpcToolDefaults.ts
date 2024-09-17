@@ -118,6 +118,18 @@ export const commonMethods: RPCMethod[] = [
     ],
   },
   { method: 'trace_block', params: ['latest'] },
+  {
+    method: 'txpool_status',
+    params: [],
+  },
+  {
+    method: 'txpool_inspect',
+    params: [],
+  },
+  {
+    method: 'txpool_content',
+    params: [],
+  },
 ]
 
 export const defaultParams: Record<string, string> = Object.fromEntries(

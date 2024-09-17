@@ -4,9 +4,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { VirtualizedDataTable } from '@/components/VirtualizedDataTable'
 import type { ColumnDef } from '@tanstack/react-table'
-import { Database, FuelIcon, Hash, RefreshCw } from 'lucide-react'
+import { Database, FuelIcon, Hash, RefreshCw, AlertTriangle, CheckCircle, XCircle } from 'lucide-react'
 import type React from 'react'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, useEffect } from 'react'
 import {
   Bar,
   BarChart,
@@ -59,6 +59,7 @@ const TransactionPool: React.FC = () => {
   const [rpcUrl, setRpcUrl] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [diagnostics, setDiagnostics] = useState<{ check: string; passed: boolean; message: string }[]>([])
 
   const client = useMemo(() => {
     if (!rpcUrl) return null
@@ -216,6 +217,122 @@ const TransactionPool: React.FC = () => {
     [],
   )
 
+  const runDiagnostics = useCallback(() => {
+    if (!stats || transactions.length === 0) return
+
+    const checks = [
+      {
+        check: "Nonce Check",
+        passed: transactions.every((tx, i, arr) => i === 0 || tx.nonce >= arr[i-1].nonce),
+        message: "Transactions are ordered by nonce"
+      },
+      {
+        check: "Gas Price Check",
+        passed: transactions.every(tx => tx.gasPrice >= stats.minGasPrice),
+        message: "All transactions meet minimum gas price"
+      },
+      {
+        check: "Pending vs Queued",
+        passed: stats.pendingCount > 0,
+        message: stats.pendingCount > 0 ? "There are pending transactions" : "No pending transactions, all may be queued"
+      },
+      {
+        check: "Gas Limit Check",
+        passed: transactions.every(tx => tx.gas <= 30000000n), // Example max gas limit
+        message: "All transactions are within gas limit"
+      },
+      {
+        check: "Gas Price Competitiveness",
+        passed: transactions.every(tx => tx.gasPrice >= stats.avgGasPrice),
+        message: transactions.every(tx => tx.gasPrice >= stats.avgGasPrice)
+          ? "All transactions have competitive gas prices"
+          : "Some transactions may have low gas prices"
+      },
+      {
+        check: "Transaction Variety",
+        passed: new Set(transactions.map(tx => tx.from)).size > 1,
+        message: new Set(transactions.map(tx => tx.from)).size > 1
+          ? "Transactions are from multiple addresses"
+          : "All transactions are from the same address"
+      },
+      {
+        check: "Large Value Transactions",
+        passed: !transactions.some(tx => tx.value > 1000000000000000000n), // > 1 ETH
+        message: !transactions.some(tx => tx.value > 1000000000000000000n)
+          ? "No unusually large value transactions detected"
+          : "There are transactions with large ETH values"
+      },
+      {
+        check: "Contract Interactions",
+        passed: transactions.some(tx => tx.input !== '0x'),
+        message: transactions.some(tx => tx.input !== '0x')
+          ? "There are transactions interacting with contracts"
+          : "No contract interactions detected"
+      },
+      {
+        check: "Nonce Gaps",
+        passed: !transactions.some((tx, i, arr) => i > 0 && tx.nonce > arr[i-1].nonce + 1),
+        message: !transactions.some((tx, i, arr) => i > 0 && tx.nonce > arr[i-1].nonce + 1)
+          ? "No nonce gaps detected"
+          : "There are nonce gaps in the transaction sequence"
+      },
+      {
+        check: "Transaction Pool Fullness",
+        passed: stats.totalTransactions < 4096, // Example max pool size
+        message: stats.totalTransactions < 4096
+          ? "Transaction pool is not full"
+          : "Transaction pool is approaching or at capacity"
+      },
+      {
+        check: "Low Gas Price Transactions",
+        passed: !transactions.some(tx => tx.gasPrice < (stats.avgGasPrice * 8n) / 10n),
+        message: transactions.some(tx => tx.gasPrice < (stats.avgGasPrice * 8n) / 10n)
+          ? "Some transactions have significantly low gas prices"
+          : "All transactions have reasonable gas prices"
+      },
+      {
+        check: "Repeated Sender",
+        passed: !transactions.some((tx, i, arr) => 
+          arr.filter(t => t.from === tx.from).length > arr.length * 0.1),
+        message: transactions.some((tx, i, arr) => 
+          arr.filter(t => t.from === tx.from).length > arr.length * 0.1)
+          ? "One address is sending a large number of transactions"
+          : "Transactions are well distributed among senders"
+      },
+      {
+        check: "Network Congestion",
+        passed: stats.pendingCount < 1000, // Adjust this threshold as needed
+        message: stats.pendingCount < 1000
+          ? "Network doesn't seem congested"
+          : "Network might be congested, causing delays"
+      },
+      {
+        check: "Nonce Sequence",
+        passed: transactions.every((tx, i, arr) => 
+          i === 0 || tx.from !== arr[i-1].from || tx.nonce === arr[i-1].nonce + 1),
+        message: transactions.every((tx, i, arr) => 
+          i === 0 || tx.from !== arr[i-1].from || tx.nonce === arr[i-1].nonce + 1)
+          ? "Transactions from each address are in correct nonce sequence"
+          : "There might be nonce issues for some addresses"
+      },
+      {
+        check: "High Gas Limit Transactions",
+        passed: !transactions.some(tx => tx.gas > 1000000n),
+        message: transactions.some(tx => tx.gas > 1000000n)
+          ? "Some transactions have unusually high gas limits"
+          : "All transactions have reasonable gas limits"
+      }
+    ]
+
+    setDiagnostics(checks)
+  }, [stats, transactions])
+
+  useEffect(() => {
+    if (stats && transactions.length > 0) {
+      runDiagnostics()
+    }
+  }, [stats, transactions, runDiagnostics])
+
   return (
     <div className="space-y-4">
       <div className="flex items-center space-x-2">
@@ -330,6 +447,52 @@ const TransactionPool: React.FC = () => {
           <div className="h-[400px] overflow-auto">
             <VirtualizedDataTable columns={columns} data={transactions} />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg flex items-center">
+            <AlertTriangle className="w-5 h-5 mr-2" />
+            Transaction Diagnostics
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {diagnostics.length > 0 ? (
+            <>
+              <ul className="space-y-2">
+                {diagnostics.map((item, index) => (
+                  <li key={index} className="flex items-center">
+                    {item.passed ? (
+                      <CheckCircle className="w-5 h-5 mr-2 text-green-500" />
+                    ) : (
+                      <XCircle className="w-5 h-5 mr-2 text-red-500" />
+                    )}
+                    <span>{item.check}: {item.message}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-4">
+                <h4 className="font-semibold">Potential Reasons for Pending Transactions:</h4>
+                <ul className="list-disc list-inside mt-2">
+                  {!diagnostics.find(d => d.check === "Gas Price Check")?.passed && 
+                    <li>Some transactions have gas prices below the network's current minimum</li>}
+                  {!diagnostics.find(d => d.check === "Low Gas Price Transactions")?.passed && 
+                    <li>Some transactions have significantly low gas prices compared to the average</li>}
+                  {!diagnostics.find(d => d.check === "Network Congestion")?.passed && 
+                    <li>The network appears to be congested, which may cause delays</li>}
+                  {!diagnostics.find(d => d.check === "Nonce Sequence")?.passed && 
+                    <li>There might be nonce issues for some addresses, blocking subsequent transactions</li>}
+                  {!diagnostics.find(d => d.check === "High Gas Limit Transactions")?.passed && 
+                    <li>Some transactions have unusually high gas limits, which may delay their inclusion in blocks</li>}
+                  {!diagnostics.find(d => d.check === "Repeated Sender")?.passed && 
+                    <li>One address is sending a large number of transactions, which might cause delays</li>}
+                </ul>
+              </div>
+            </>
+          ) : (
+            <p>Run a transaction pool query to see diagnostics.</p>
+          )}
         </CardContent>
       </Card>
     </div>
