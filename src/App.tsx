@@ -22,6 +22,7 @@ import {
   GitBranchIcon,
   GitCommitIcon,
   HashIcon,
+  KeyIcon,
   ListIcon,
   PickaxeIcon,
   TestTube2Icon,
@@ -35,9 +36,10 @@ import { WagmiProvider, createConfig } from 'wagmi'
 import './App.css'
 import ChainAnalyzer from './components/ChainAnalyzer'
 import ChainExtractor from './components/ChainExtractor'
+import HexConverter from './components/HexConverter'
+import KeyConverter from './components/KeyConverter'
 import RPCTool from './components/RPCTool'
 import TransactionPool from './components/TransactionPool'
-import HexConverter from './components/HexConverter'
 
 const config = createConfig(
   getDefaultConfig({
@@ -129,6 +131,12 @@ const sidebarItems = [
     label: 'Hex Converter',
     icon: HashIcon,
     component: HexConverter,
+  },
+  {
+    id: 'keyConverter',
+    label: 'Key Converter',
+    icon: KeyIcon,
+    component: KeyConverter,
   },
 ]
 
