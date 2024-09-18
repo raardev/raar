@@ -10,6 +10,7 @@ RaaR is a desktop application built with Tauri, React, and TypeScript, designed 
 
 - **RPC Client**: Interact with Ethereum nodes using JSON-RPC calls.
 - **Transaction Tracer**: Analyze and trace Ethereum transactions.
+- **Transaction Pool**: View and manage pending transactions.
 - **Chain List**: View and manage information about different blockchain networks.
 - **Devnet**: Set up and manage local development networks.
 - **Wallet Generator**: Create and manage Ethereum wallets.
@@ -18,6 +19,8 @@ RaaR is a desktop application built with Tauri, React, and TypeScript, designed 
 - **4bytes Decoder**: Decode function signatures, calldata, and events.
 - **Gas Tracker**: Monitor gas prices across multiple chains.
 - **Contract Map**: Visualize contract relationships (experimental).
+- **Hex Converter**: Convert between hex strings and numbers.
+- **Key Converter**: Convert mnemonics or private keys to addresses.
 
 ## Getting Started
 

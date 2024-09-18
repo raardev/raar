@@ -200,7 +200,7 @@ const ChainAnalyzer: React.FC = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.data.map((row: string[], rowIndex: number) => (
+          {data.data.map((row: string[]) => (
             <TableRow key={row.join('-')}>
               {row.map((cell: string, cellIndex: number) => (
                 <TableCell
@@ -319,26 +319,19 @@ const ChainAnalyzer: React.FC = () => {
               file.name.toLowerCase().includes(searchTerm.toLowerCase()),
             )
             .map((file: FileInfo) => (
-              <div
+              <button
                 key={file.path}
-                className={`flex items-center p-2 cursor-pointer ${
+                className={`flex items-center p-2 w-full text-left ${
                   selectedFile === file.path
                     ? 'bg-blue-100'
                     : 'hover:bg-gray-100'
                 }`}
                 onClick={() => handleFileClick(file)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    handleFileClick(file)
-                  }
-                }}
-                tabIndex={0}
-                role="button"
                 title={file.name}
               >
                 <span className="mr-2">{getFileIcon(file.name)}</span>
                 <span className="truncate text-xs">{file.name}</span>
-              </div>
+              </button>
             ))}
         </div>
       </div>
