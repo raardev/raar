@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.0] - 2024-09-18
+
+### Added
+
+- Transaction Pool: View and manage pending transactions in the node's transaction pool
+- Hex Converter: Convert between hex strings and numbers
+- Key Converter: Convert mnemonics or private keys to addresses
+
+### Fixed
+
+- Fixed RPC client not using the pasted request
+
+
 ## [0.1.1] - 2024-08-31
 
 ### Fixed
@@ -27,3 +40,4 @@
 
 [0.1.0]: https://github.com/raardev/raar/releases/tag/0.1.0
 [0.1.1]: https://github.com/raardev/raar/releases/tag/0.1.1
+[0.2.0]: https://github.com/raardev/raar/releases/tag/0.2.0
