@@ -38,6 +38,14 @@
       },
       "clipboard": {
         "writeText": true
+      },
+      "http": {
+        "all": true,
+        "request": true,
+        "scope": [
+          "http://*",
+          "https://*"
+        ]
       }
     },
     "windows": [
@@ -48,7 +56,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; connect-src 'self' http: https:;"
     },
     "bundle": {
       "active": true,
