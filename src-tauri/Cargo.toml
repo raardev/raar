@@ -30,7 +30,7 @@ log = "0.4"
 env_logger = "0.10"
 duckdb = { version = "1.0.0", features = ["bundled", "polars"] }
 base64 = "0.21.0"
-polars = { version = "0.35.4", features = ["lazy"] }
+polars = { version = "0.35.4", features = ["json", "serde"] }
 polars-core = { version = "0.35.4" }
 hex = "0.4.3"
 

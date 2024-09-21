@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -7,19 +8,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useChainAnalyzerStore } from '@/stores/chainAnalyzerStore'
 import { sql } from '@codemirror/lang-sql'
-import { open } from '@tauri-apps/api/dialog'
-import { readDir } from '@tauri-apps/api/fs'
+import type { ColumnDef } from '@tanstack/react-table'
+import { open, save } from '@tauri-apps/api/dialog'
+import { readDir, writeTextFile } from '@tauri-apps/api/fs'
 import { invoke } from '@tauri-apps/api/tauri'
 import CodeMirror from '@uiw/react-codemirror'
 import {
@@ -40,17 +34,35 @@ import {
   AreaChart,
   Bar,
   BarChart,
+  Brush,
   CartesianGrid,
   Legend,
   Line,
   LineChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts'
 import { toast } from 'sonner'
-import type { DataFrameResult, FileInfo } from '../types/chainAnalyzer'
+import type { FileInfo } from '../types/chainAnalyzer'
+import { VirtualizedDataTable } from './VirtualizedDataTable'
+
+interface QueryResult {
+  json: string
+}
+
+interface DataRow {
+  [key: string]: string | number | boolean | null
+}
+
+interface Column {
+  name: string
+  datatype: string
+  bit_settings: string
+  values: (string | number | boolean | null)[]
+}
 
 const ChainAnalyzer: React.FC = () => {
   const {
@@ -73,8 +85,16 @@ const ChainAnalyzer: React.FC = () => {
   } = useChainAnalyzerStore()
   const [searchTerm, setSearchTerm] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-
-  console.log('query result', queryResult)
+  const [xAxis, setXAxis] = useState<string>('')
+  const [yAxis, setYAxis] = useState<string>('')
+  const [showBrush, setShowBrush] = useState(false)
+  const [showReferenceLine, setShowReferenceLine] = useState(false)
+  const [referenceLineValue, setReferenceLineValue] = useState('')
+  const [data, setData] = useState<DataRow[]>([])
+  const [columns, setColumns] = useState<string[]>([])
+  const [tableColumns, setTableColumns] = useState<
+    ColumnDef<DataRow, unknown>[]
+  >([])
 
   const selectDirectory = async () => {
     const selected = await open({
@@ -103,7 +123,7 @@ const ChainAnalyzer: React.FC = () => {
     loadFiles()
   }, [loadFiles])
 
-  const executeQuery = async () => {
+  const executeQuery = useCallback(async () => {
     if (!sqlQuery) {
       toast.error('Please enter a SQL query')
       return
@@ -114,7 +134,6 @@ const ChainAnalyzer: React.FC = () => {
     const startTime = performance.now()
 
     try {
-      // Replace file names with full paths in the query
       const modifiedQuery = sqlQuery.replace(
         /'([^']+\.parquet)'/g,
         (match, fileName) => {
@@ -124,26 +143,61 @@ const ChainAnalyzer: React.FC = () => {
       )
 
       console.log(`Executing query: ${modifiedQuery}`)
-      const result: DataFrameResult = await invoke('execute_query_command', {
+      const result: QueryResult = await invoke('execute_query_command', {
         query: modifiedQuery,
       })
 
-      if (result.schema.length === 0 && result.data.length === 0) {
-        setQueryResult(null)
-        setQueryError('Query returned no results.')
-      } else {
-        setQueryResult(result)
+      const parsedData = JSON.parse(result.json)
+      console.log('Parsed data:', parsedData)
+
+      if (parsedData.columns && parsedData.columns.length > 0) {
+        const columns = parsedData.columns.map((col: Column) => col.name)
+        const data = parsedData.columns[0].values.map(
+          (_: unknown, index: number) => {
+            const row: { [key: string]: unknown } = {}
+            for (const col of parsedData.columns) {
+              row[col.name] =
+                col.values[index] && typeof col.values[index] === 'object'
+                  ? Object.values(col.values[index])[0]
+                  : col.values[index]
+            }
+            return row
+          },
+        )
+
+        setColumns(columns)
+        setData(data)
+        setTableColumns(
+          columns.map((col: string) => ({
+            accessorKey: col,
+            header: col,
+            cell: (info) => {
+              const value = info.getValue()
+              // 对于二进制数据（地址），保持原样显示
+              return typeof value === 'string' && value.startsWith('0x')
+                ? value
+                : JSON.stringify(value)
+            },
+          })),
+        )
         setQueryTime(performance.now() - startTime)
+      } else {
+        setData([])
+        setColumns([])
+        setTableColumns([])
+        setQueryError('Query returned no results.')
       }
     } catch (error) {
       console.error('Query execution error:', error)
       setQueryError(`Query execution failed: ${error}`)
-      setQueryResult(null)
+      setData([])
+      setColumns([])
+      setTableColumns([])
       toast.error(`Query execution failed: ${error}`)
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [sqlQuery, files, setQueryError, setQueryTime])
 
   const previewFile = async (filePath: string) => {
     try {
@@ -159,7 +213,7 @@ const ChainAnalyzer: React.FC = () => {
     }
   }
 
-  const downloadResults = () => {
+  const downloadResults = async () => {
     if (!queryResult) return
 
     const csv = [
@@ -167,58 +221,35 @@ const ChainAnalyzer: React.FC = () => {
       ...queryResult.data.map((row: string[]) => row.join(',')),
     ].join('\n')
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.setAttribute('href', url)
-    link.setAttribute('download', 'query_results.csv')
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-  }
+    try {
+      const filePath = await save({
+        filters: [
+          {
+            name: 'CSV',
+            extensions: ['csv'],
+          },
+        ],
+      })
 
-  const renderTable = (data: DataFrameResult) => {
-    if (!data || !data.schema || !data.data) {
-      return <div>No data available</div>
+      if (filePath) {
+        await writeTextFile(filePath, csv)
+        toast.success('Results saved successfully')
+      }
+    } catch (error) {
+      console.error('Error saving file:', error)
+      toast.error('Failed to save results')
     }
-
-    return (
-      <Table className="text-xs">
-        <TableHeader>
-          <TableRow>
-            {data.schema.map(([column, type]: [string, string]) => (
-              <TableHead
-                key={column}
-                title={type}
-                className="font-semibold py-2"
-              >
-                {column}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.data.map((row: string[]) => (
-            <TableRow key={row.join('-')}>
-              {row.map((cell: string, cellIndex: number) => (
-                <TableCell
-                  key={`${row.join('-')}-${data.schema[cellIndex][0]}`}
-                  className="py-1"
-                >
-                  {cell}
-                </TableCell>
-              ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    )
   }
+
+  useEffect(() => {
+    if (data && data.length > 0) {
+      setXAxis(columns[0])
+      setYAxis(columns[1] || columns[0])
+    }
+  }, [data, columns])
 
   const renderChart = () => {
-    if (!queryResult) return null
+    if (!data || !xAxis || !yAxis) return null
 
     const ChartComponent =
       chartType === 'bar'
@@ -227,46 +258,95 @@ const ChainAnalyzer: React.FC = () => {
           ? LineChart
           : AreaChart
 
-    const chartData = queryResult.data.map((row: string[]) => {
-      const rowData: { [key: string]: string } = {}
-      queryResult.schema.forEach(
-        ([name, _]: [string, string], index: number) => {
-          rowData[name] = row[index]
-        },
-      )
-      return rowData
-    })
-
     return (
-      <ResponsiveContainer width="100%" height={300}>
-        <ChartComponent data={chartData}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey={queryResult.schema[0][0]} />
-          <YAxis />
-          <Tooltip />
-          <Legend />
-          {queryResult.schema
-            .slice(1)
-            .map(([column, _]: [string, string], index: number) => {
-              const commonProps = {
-                key: column,
-                type: 'monotone' as const,
-                dataKey: column,
-                fill: `hsl(${index * 30}, 70%, 50%)`,
-                stroke: `hsl(${index * 30}, 70%, 50%)`,
-              }
-
-              switch (chartType) {
-                case 'bar':
-                  return <Bar {...commonProps} />
-                case 'line':
-                  return <Line {...commonProps} />
-                case 'area':
-                  return <Area {...commonProps} />
-              }
-            })}
-        </ChartComponent>
-      </ResponsiveContainer>
+      <>
+        <div className="flex items-center space-x-4 mb-4">
+          <div className="flex items-center space-x-2">
+            <Label htmlFor="x-axis">X Axis:</Label>
+            <Select value={xAxis} onValueChange={setXAxis}>
+              <SelectTrigger id="x-axis" className="w-[180px]">
+                <SelectValue placeholder="Select X Axis" />
+              </SelectTrigger>
+              <SelectContent>
+                {columns.map((column) => (
+                  <SelectItem key={column} value={column}>
+                    {column}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Label htmlFor="y-axis">Y Axis:</Label>
+            <Select value={yAxis} onValueChange={setYAxis}>
+              <SelectTrigger id="y-axis" className="w-[180px]">
+                <SelectValue placeholder="Select Y Axis" />
+              </SelectTrigger>
+              <SelectContent>
+                {columns.map((column) => (
+                  <SelectItem key={column} value={column}>
+                    {column}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="flex items-center space-x-4 mb-4">
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="show-brush"
+              checked={showBrush}
+              onChange={(e) => setShowBrush(e.target.checked)}
+            />
+            <Label htmlFor="show-brush">Show Brush</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="show-reference-line"
+              checked={showReferenceLine}
+              onChange={(e) => setShowReferenceLine(e.target.checked)}
+            />
+            <Label htmlFor="show-reference-line">Show Reference Line</Label>
+          </div>
+          {showReferenceLine && (
+            <Input
+              type="number"
+              placeholder="Reference Line Value"
+              value={referenceLineValue}
+              onChange={(e) => setReferenceLineValue(e.target.value)}
+              className="w-32"
+            />
+          )}
+        </div>
+        <ResponsiveContainer width="100%" height={300}>
+          <ChartComponent data={data}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey={xAxis} />
+            <YAxis dataKey={yAxis} />
+            <Tooltip />
+            <Legend />
+            {chartType === 'bar' && <Bar dataKey={yAxis} fill="#8884d8" />}
+            {chartType === 'line' && (
+              <Line type="monotone" dataKey={yAxis} stroke="#8884d8" />
+            )}
+            {chartType === 'area' && (
+              <Area type="monotone" dataKey={yAxis} fill="#8884d8" />
+            )}
+            {showBrush && (
+              <Brush dataKey={xAxis} height={30} stroke="#8884d8" />
+            )}
+            {showReferenceLine && (
+              <ReferenceLine
+                y={Number.parseFloat(referenceLineValue)}
+                stroke="red"
+              />
+            )}
+          </ChartComponent>
+        </ResponsiveContainer>
+      </>
     )
   }
 
@@ -320,6 +400,7 @@ const ChainAnalyzer: React.FC = () => {
             )
             .map((file: FileInfo) => (
               <button
+                type="button"
                 key={file.path}
                 className={`flex items-center p-2 w-full text-left ${
                   selectedFile === file.path
@@ -382,7 +463,7 @@ const ChainAnalyzer: React.FC = () => {
               {queryError}
             </div>
           )}
-          {queryResult && (
+          {data.length > 0 && columns.length > 0 && (
             <div className="h-full flex flex-col">
               <Tabs defaultValue="table" className="flex-1 flex flex-col">
                 <div className="px-4 border-b border-gray-200">
@@ -392,11 +473,10 @@ const ChainAnalyzer: React.FC = () => {
                   </TabsList>
                 </div>
                 <TabsContent value="table" className="flex-1 overflow-auto p-4">
-                  {renderTable(queryResult)}
+                  <VirtualizedDataTable columns={tableColumns} data={data} />
                 </TabsContent>
                 <TabsContent value="chart" className="flex-1 overflow-auto p-4">
                   <div className="flex items-center space-x-2 text-xs mb-2">
-                    <span>Chart Type:</span>
                     <Select
                       value={chartType}
                       onValueChange={(value) =>
@@ -418,7 +498,7 @@ const ChainAnalyzer: React.FC = () => {
               </Tabs>
             </div>
           )}
-          {!queryResult && !queryError && (
+          {data.length === 0 && !queryError && (
             <div className="text-center text-gray-500 mt-8">
               No query results to display. Select a file or execute a query.
             </div>

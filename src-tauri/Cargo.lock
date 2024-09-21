@@ -1130,6 +1130,9 @@ name = "bitflags"
 version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b048fb63fd8b5923fc5aa7b340d8e156aec7ec02f0c78fa8a6ddc2613f6f71de"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "bitvec"
@@ -5599,6 +5602,7 @@ dependencies = [
  "rand_distr",
  "rayon",
  "regex",
+ "serde",
  "smartstring",
  "thiserror",
  "version_check",
@@ -5681,11 +5685,14 @@ dependencies = [
  "polars-arrow 0.35.4",
  "polars-core 0.35.4",
  "polars-error 0.35.4",
+ "polars-json 0.35.4",
  "polars-time 0.35.4",
  "polars-utils 0.35.4",
  "rayon",
  "regex",
  "ryu",
+ "serde_json",
+ "simd-json",
  "simdutf8",
  "smartstring",
 ]
@@ -5713,7 +5720,7 @@ dependencies = [
  "polars-arrow 0.36.2",
  "polars-core 0.36.2",
  "polars-error 0.36.2",
- "polars-json",
+ "polars-json 0.36.2",
  "polars-parquet",
  "polars-time 0.36.2",
  "polars-utils 0.36.2",
@@ -5726,6 +5733,27 @@ dependencies = [
  "smartstring",
  "tokio",
  "tokio-util",
+]
+
+[[package]]
+name = "polars-json"
+version = "0.35.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "93b9cb83c19daf334c398e56a9361bd79c8ad0718296db2afab08d476bd84559"
+dependencies = [
+ "ahash 0.8.11",
+ "chrono",
+ "fallible-streaming-iterator",
+ "hashbrown 0.14.5",
+ "indexmap 2.4.0",
+ "itoa 1.0.11",
+ "num-traits",
+ "polars-arrow 0.35.4",
+ "polars-error 0.35.4",
+ "polars-utils 0.35.4",
+ "ryu",
+ "simd-json",
+ "streaming-iterator",
 ]
 
 [[package]]
@@ -5762,6 +5790,7 @@ dependencies = [
  "polars-arrow 0.35.4",
  "polars-core 0.35.4",
  "polars-io 0.35.4",
+ "polars-json 0.35.4",
  "polars-ops 0.35.4",
  "polars-pipe 0.35.4",
  "polars-plan 0.35.4",
@@ -5785,7 +5814,7 @@ dependencies = [
  "polars-arrow 0.36.2",
  "polars-core 0.36.2",
  "polars-io 0.36.2",
- "polars-json",
+ "polars-json 0.36.2",
  "polars-ops 0.36.2",
  "polars-pipe 0.36.2",
  "polars-plan 0.36.2",
@@ -5956,7 +5985,7 @@ dependencies = [
  "polars-arrow 0.36.2",
  "polars-core 0.36.2",
  "polars-io 0.36.2",
- "polars-json",
+ "polars-json 0.36.2",
  "polars-ops 0.36.2",
  "polars-parquet",
  "polars-time 0.36.2",
@@ -7406,6 +7435,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3fb72c633efbaa2dd666986505016c32c3044395ceaf881518399d2f4127ee29"
 dependencies = [
  "autocfg",
+ "serde",
  "static_assertions",
  "version_check",
 ]

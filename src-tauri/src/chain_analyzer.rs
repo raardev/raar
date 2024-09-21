@@ -1,67 +1,76 @@
 use duckdb::{Connection, Result};
-use hex;
 use log::info;
-use polars_core::prelude::*;
-use polars_core::utils::accumulate_dataframes_vertical_unchecked;
+use polars::prelude::*;
 use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
 
 #[derive(Serialize, Deserialize)]
-pub struct DataFrameResult {
-    schema: Vec<(String, String)>, // (column_name, data_type)
-    data: Vec<Vec<String>>,
+pub struct QueryResult {
+    json: String,
 }
 
-pub fn execute_query(query: &str) -> Result<DataFrameResult> {
+fn bytes_to_hex(bytes: &[u8]) -> String {
+    format!(
+        "0x{}",
+        bytes
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect::<String>()
+    )
+}
+
+pub fn execute_query(query: &str) -> Result<QueryResult> {
     info!("Executing query: {}", query);
 
     let conn = Connection::open_in_memory()?;
     let mut stmt = conn.prepare(query)?;
 
-    // Use query_polars to get a Polars DataFrame
-    let pl = stmt.query_polars([])?;
+    let df: DataFrame = stmt
+        .query_polars([])?
+        .collect::<Vec<DataFrame>>()
+        .pop()
+        .unwrap_or_default();
 
-    // Check if the query result is empty
-    let df_vec: Vec<DataFrame> = pl.collect();
-    if df_vec.is_empty() {
-        // Return an empty result instead of panicking
-        return Ok(DataFrameResult {
-            schema: vec![],
-            data: vec![],
+    if df.is_empty() {
+        return Ok(QueryResult {
+            json: "[]".to_string(),
         });
     }
 
-    let df = accumulate_dataframes_vertical_unchecked(df_vec);
-
     info!("DataFrame: {:?}", df);
 
-    // Convert DataFrame to our DataFrameResult structure
-    let schema: Vec<(String, String)> = df
-        .schema()
+    let json_df = df
+        .get_columns()
         .iter()
-        .map(|(name, dtype)| (name.to_string(), dtype.to_string()))
-        .collect();
+        .map(|series| {
+            let name = series.name();
+            let values: Vec<Value> = match series.dtype() {
+                DataType::Binary => series
+                    .binary()
+                    .unwrap()
+                    .into_iter()
+                    .map(|opt_v| {
+                        opt_v
+                            .map(|v| json!(bytes_to_hex(&v)))
+                            .unwrap_or(Value::Null)
+                    })
+                    .collect(),
+                _ => series.iter().map(|av| json!(av)).collect(),
+            };
 
-    let data: Vec<Vec<String>> = df
-        .iter()
-        .map(|s| {
-            s.iter()
-                .map(|av| match av {
-                    AnyValue::Binary(bytes) => format!("0x{}", hex::encode(bytes)),
-                    _ => av.to_string(),
-                })
-                .collect()
+            json!({
+                "name": name,
+                "datatype": series.dtype().to_string(),
+                "values": values
+            })
         })
-        .collect();
+        .collect::<Vec<Value>>();
 
-    // Transpose the data matrix
-    let transposed_data: Vec<Vec<String>> = (0..data[0].len())
-        .map(|i| data.iter().map(|row| row[i].clone()).collect())
-        .collect();
+    let result = json!({ "columns": json_df });
 
-    info!("Transposed data: {:?}", transposed_data);
+    info!("JSON result: {}", result);
 
-    Ok(DataFrameResult {
-        schema,
-        data: transposed_data,
+    Ok(QueryResult {
+        json: result.to_string(),
     })
 }

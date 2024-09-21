@@ -235,15 +235,11 @@ async fn subscribe_to_indexer_logs(
 
 mod chain_analyzer;
 
-use chain_analyzer::{execute_query, DataFrameResult};
+use chain_analyzer::{execute_query, QueryResult};
 
 #[tauri::command]
-fn execute_query_command(query: String) -> Result<DataFrameResult, String> {
-    info!("Executing query command");
-    execute_query(&query).map_err(|e| {
-        error!("Query execution failed: {}", e);
-        format!("Query execution failed: {}", e)
-    })
+fn execute_query_command(query: &str) -> Result<QueryResult, String> {
+    execute_query(query).map_err(|e| e.to_string())
 }
 
 fn main() {
