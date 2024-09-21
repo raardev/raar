@@ -1,6 +1,6 @@
 use cryo_cli::{run, Args};
 use cryo_freeze::FreezeSummary;
-use log::{debug, error, info, Level, LevelFilter, Metadata, Record};
+use log::{debug, error, info, Metadata, Record};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -21,24 +21,69 @@ pub struct IndexerState {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IndexerOptions {
-    pub rpc: String,
-    pub blocks: String,
+    // Basic options
+    pub datatype: Vec<String>,
+    pub rpc: Option<String>,
+    pub output_dir: String,
+
+    // Content options
+    pub blocks: Option<Vec<String>>,
+    pub timestamps: Option<Vec<String>>,
+    pub txs: Option<Vec<String>>,
     pub align: bool,
     pub reorg_buffer: u64,
-    pub include_columns: String,
-    pub exclude_columns: String,
-    pub sort: String,
+    pub include_columns: Option<Vec<String>>,
+    pub exclude_columns: Option<Vec<String>>,
+    pub columns: Option<Vec<String>>,
+    pub u256_types: Option<Vec<String>>,
+    pub hex: bool,
+    pub sort: Option<Vec<String>>,
     pub exclude_failed: bool,
-    pub requests_per_second: u32,
+
+    // Source options
+    pub network_name: Option<String>,
+
+    // Acquisition options
+    pub requests_per_second: Option<u32>,
     pub max_retries: u32,
+    pub initial_backoff: u64,
+    pub max_concurrent_requests: Option<u64>,
+    pub max_concurrent_chunks: Option<u64>,
+    pub chunk_order: Option<String>,
+    pub dry: bool,
+
+    // Output options
     pub chunk_size: u64,
-    pub output_dir: String,
+    pub n_chunks: Option<u64>,
+    pub partition_by: Option<Vec<String>>,
+    pub subdirs: Vec<String>,
+    pub label: Option<String>,
     pub overwrite: bool,
-    pub format: String,
-    pub compression: Option<Vec<String>>,
-    pub initial_backoff: Option<u64>,
-    pub no_stats: Option<bool>,
-    pub inner_request_size: Option<u64>,
+    pub csv: bool,
+    pub json: bool,
+    pub row_group_size: Option<usize>,
+    pub n_row_groups: Option<usize>,
+    pub no_stats: bool,
+    pub compression: Vec<String>,
+    pub report_dir: Option<PathBuf>,
+    pub no_report: bool,
+
+    // Dataset-specific options
+    pub address: Option<Vec<String>>,
+    pub to_address: Option<Vec<String>>,
+    pub from_address: Option<Vec<String>>,
+    pub call_data: Option<Vec<String>>,
+    pub function: Option<Vec<String>>,
+    pub inputs: Option<Vec<String>>,
+    pub slot: Option<Vec<String>>,
+    pub contract: Option<Vec<String>>,
+    pub topic0: Option<Vec<String>>,
+    pub topic1: Option<Vec<String>>,
+    pub topic2: Option<Vec<String>>,
+    pub topic3: Option<Vec<String>>,
+    pub event_signature: Option<String>,
+    pub inner_request_size: u64,
+    pub js_tracer: Option<String>,
 }
 
 pub struct IndexerTool {
@@ -54,11 +99,42 @@ impl IndexerTool {
             indexing_progress: 0.0,
             log_messages: Vec::new(),
             available_datasets: vec![
+                "address_appearances".to_string(),
+                "balance_diffs".to_string(),
+                "balance_reads".to_string(),
+                "balances".to_string(),
                 "blocks".to_string(),
-                "transactions".to_string(),
-                "traces".to_string(),
-                "logs".to_string(),
+                "code_diffs".to_string(),
+                "code_reads".to_string(),
+                "codes".to_string(),
                 "contracts".to_string(),
+                "erc20_balances".to_string(),
+                "erc20_metadata".to_string(),
+                "erc20_supplies".to_string(),
+                "erc20_transfers".to_string(),
+                "erc721_metadata".to_string(),
+                "erc721_transfers".to_string(),
+                "eth_calls".to_string(),
+                "four_byte_counts".to_string(),
+                "geth_calls".to_string(),
+                "geth_code_diffs".to_string(),
+                "geth_balance_diffs".to_string(),
+                "geth_storage_diffs".to_string(),
+                "geth_nonce_diffs".to_string(),
+                "geth_opcodes".to_string(),
+                "javascript_traces".to_string(),
+                "logs".to_string(),
+                "native_transfers".to_string(),
+                "nonce_diffs".to_string(),
+                "nonce_reads".to_string(),
+                "nonces".to_string(),
+                "slots".to_string(),
+                "storage_diffs".to_string(),
+                "storage_reads".to_string(),
+                "traces".to_string(),
+                "trace_calls".to_string(),
+                "transactions".to_string(),
+                "vm_traces".to_string(),
             ],
             selected_dataset: None,
             summary: None,
@@ -75,8 +151,6 @@ impl IndexerTool {
         dataset: String,
         options: IndexerOptions,
     ) -> Result<CompactFreezeSummary, String> {
-        log::set_max_level(LevelFilter::Info);
-
         info!(target: "cryo", "Starting indexing for dataset: {} at path: {:?}", dataset, path);
 
         let mut state = self.state.lock().await;
@@ -131,51 +205,63 @@ impl IndexerTool {
         let mut args = Args::default();
         args.output_dir = path.to_str().ok_or("Invalid path")?.to_string();
         args.datatype = vec![dataset.to_string()];
-        args.rpc = Some(options.rpc.clone());
-        args.blocks = Some(vec![options.blocks.clone()]);
+        args.rpc = options.rpc.clone();
+        args.blocks = options.blocks.clone();
         args.align = options.align;
         args.reorg_buffer = options.reorg_buffer;
-        args.include_columns = if options.include_columns.is_empty() {
-            None
-        } else {
-            Some(
-                options
-                    .include_columns
-                    .split(',')
-                    .map(String::from)
-                    .collect(),
-            )
-        };
-        args.exclude_columns = if options.exclude_columns.is_empty() {
-            None
-        } else {
-            Some(
-                options
-                    .exclude_columns
-                    .split(',')
-                    .map(String::from)
-                    .collect(),
-            )
-        };
-        args.sort = if options.sort.is_empty() {
-            None
-        } else {
-            Some(options.sort.split(',').map(String::from).collect())
-        };
+        args.include_columns = options.include_columns.clone();
+        args.exclude_columns = options.exclude_columns.clone();
+        args.sort = options.sort.clone();
         args.exclude_failed = options.exclude_failed;
-        args.requests_per_second = Some(options.requests_per_second);
+        args.requests_per_second = options.requests_per_second;
         args.max_retries = options.max_retries;
         args.chunk_size = options.chunk_size;
         args.overwrite = options.overwrite;
-        args.csv = options.format == "csv";
-        args.json = options.format == "json";
+        args.csv = options.csv;
+        args.json = options.json;
         args.verbose = true;
 
         // Set default values
         args.compression = vec!["lz4".to_string()];
-        args.initial_backoff = 500;
-        args.no_stats = false;
-        args.inner_request_size = 1;
+        args.initial_backoff = options.initial_backoff;
+        args.no_stats = options.no_stats;
+        args.inner_request_size = options.inner_request_size;
+
+        // Set new fields
+        args.timestamps = options.timestamps.clone();
+        args.txs = options.txs.clone();
+        args.columns = options.columns.clone();
+        args.u256_types = options.u256_types.clone();
+        args.hex = options.hex;
+        args.network_name = options.network_name.clone();
+        args.initial_backoff = options.initial_backoff;
+        args.max_concurrent_requests = options.max_concurrent_requests;
+        args.max_concurrent_chunks = options.max_concurrent_chunks;
+        args.chunk_order = options.chunk_order.clone();
+        args.dry = options.dry;
+        args.n_chunks = options.n_chunks;
+        args.partition_by = options.partition_by.clone();
+        args.subdirs = options.subdirs.clone();
+        args.label = options.label.clone();
+        args.row_group_size = options.row_group_size;
+        args.n_row_groups = options.n_row_groups;
+        args.compression = options.compression.clone();
+        args.report_dir = options.report_dir.clone();
+        args.no_report = options.no_report;
+        args.address = options.address.clone();
+        args.to_address = options.to_address.clone();
+        args.from_address = options.from_address.clone();
+        args.call_data = options.call_data.clone();
+        args.function = options.function.clone();
+        args.inputs = options.inputs.clone();
+        args.slot = options.slot.clone();
+        args.contract = options.contract.clone();
+        args.topic0 = options.topic0.clone();
+        args.topic1 = options.topic1.clone();
+        args.topic2 = options.topic2.clone();
+        args.topic3 = options.topic3.clone();
+        args.event_signature = options.event_signature.clone();
+        args.js_tracer = options.js_tracer.clone();
 
         Ok(args)
     }
@@ -209,7 +295,7 @@ struct CryoLogger {
 
 impl log::Log for CryoLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
-        metadata.level() <= Level::Info
+        metadata.level() <= log::Level::Info
     }
 
     fn log(&self, record: &Record) {
