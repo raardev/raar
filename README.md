@@ -1,7 +1,5 @@
 # RaaR
 
-![image](https://media.bonsai.town/file/85669b61b29661b6c9728.png)
-
 An Open-Source, Local-First Swiss Army Knife for Crypto Development
 
 RaaR is a desktop application built with Tauri, React, and TypeScript, designed to provide a suite of tools for crypto developers and blockchain enthusiasts.
@@ -11,6 +9,8 @@ RaaR is a desktop application built with Tauri, React, and TypeScript, designed 
 - **RPC Client**: Interact with Ethereum nodes using JSON-RPC calls.
 - **Transaction Tracer**: Analyze and trace Ethereum transactions.
 - **Transaction Pool**: View and manage pending transactions.
+- **Chain Extractor**: Extract data from the blockchain
+- **Chain Analyzer**: Analyze and visualize blockchain data
 - **Chain List**: View and manage information about different blockchain networks.
 - **Devnet**: Set up and manage local development networks.
 - **Wallet Generator**: Create and manage Ethereum wallets.
@@ -34,7 +34,7 @@ RaaR is a desktop application built with Tauri, React, and TypeScript, designed 
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/raar.git
+   git clone https://github.com/raardev/raar.git
    cd raar
    ```
 

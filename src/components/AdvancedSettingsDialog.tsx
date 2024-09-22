@@ -72,7 +72,7 @@ const AdvancedSettingsDialog: React.FC<AdvancedSettingsDialogProps> = ({
     return (selectFields[key] || []).map((v) => ({ value: v, label: v }))
   }
 
-  const renderOptions = (category: string, keys: (keyof IndexerOptions)[]) => (
+  const renderOptions = (_category: string, keys: (keyof IndexerOptions)[]) => (
     <div className="grid gap-4 py-4">
       {keys.map((key) => {
         const fieldType = getFieldType(key, options[key])
