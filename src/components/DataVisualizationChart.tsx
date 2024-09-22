@@ -155,6 +155,7 @@ const DataVisualizationChart: React.FC<DataVisualizationChartProps> = ({
           />
           <ChartTooltip content={<ChartTooltipContent />} />
           <ChartLegend content={<ChartLegendContent />} />
+          {/* @ts-ignore */}
           <DataComponent
             dataKey={yAxis}
             fill={`var(--color-${yAxis})`}

@@ -15,33 +15,22 @@ import { OptionField } from './OptionField'
 export const convertOptionsToBackend = (
   options: IndexerOptions,
 ): IndexerOptions => {
+  const convertToArray = (value: string | string[] | null) =>
+    value ? (typeof value === 'string' ? [value] : value) : null
+
   return {
     ...options,
-    // Convert single string to array for these fields
-    blocks: options.blocks ? options.blocks.split(',') : null,
-    timestamps: options.timestamps ? options.timestamps.split(',') : null,
-    txs: options.txs ? options.txs.split(',') : null,
-    // Convert string to array for these fields
-    includeColumns: options.includeColumns
-      ? options.includeColumns.split(',')
-      : null,
-    excludeColumns: options.excludeColumns
-      ? options.excludeColumns.split(',')
-      : null,
-    // Handle sort option
-    sort: options.sort
-      ? options.sort === 'none'
-        ? null
-        : options.sort.split(',')
-      : null,
-    // Convert number to Option<u64> for these fields
+    blocks: convertToArray(options.blocks),
+    timestamps: convertToArray(options.timestamps),
+    txs: convertToArray(options.txs),
+    includeColumns: convertToArray(options.includeColumns),
+    excludeColumns: convertToArray(options.excludeColumns),
+    sort: options.sort === 'none' ? null : convertToArray(options.sort),
     nChunks: options.nChunks || null,
     maxConcurrentRequests: options.maxConcurrentRequests || null,
     maxConcurrentChunks: options.maxConcurrentChunks || null,
-    // Convert number to Option<usize> for these fields
     rowGroupSize: options.rowGroupSize || null,
     nRowGroups: options.nRowGroups || null,
-    // Convert string to Option<PathBuf> for this field
     reportDir: options.reportDir || null,
   }
 }
@@ -91,6 +80,7 @@ const AdvancedSettingsDialog: React.FC<AdvancedSettingsDialogProps> = ({
           <OptionField
             key={key}
             label={key}
+            // @ts-ignore
             value={options[key]}
             onChange={(newValue) => onOptionChange(key, newValue)}
             type={fieldType}

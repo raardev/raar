@@ -1,6 +1,6 @@
 [package]
 name = "raar"
-version = "0.1.1"
+version = "0.3.0"
 description = "Raar"
 authors = ["daoleno"]
 edition = "2021"

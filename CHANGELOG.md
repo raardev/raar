@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0] - 2024-09-22
+
+### Added
+
+- Chain Extractor: Extract data from the blockchain using Cryo
+- Chain Analyzer: Analyze and visualize blockchain data using DuckDB
+
+### Fixed
+
+- HTTP request is not working
+
+
 ## [0.2.0] - 2024-09-18
 
 ### Added
@@ -41,3 +53,4 @@
 [0.1.0]: https://github.com/raardev/raar/releases/tag/0.1.0
 [0.1.1]: https://github.com/raardev/raar/releases/tag/0.1.1
 [0.2.0]: https://github.com/raardev/raar/releases/tag/0.2.0
+[0.3.0]: https://github.com/raardev/raar/releases/tag/0.3.0

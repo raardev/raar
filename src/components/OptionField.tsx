@@ -10,7 +10,9 @@ import {
   SelectValue,
 } from './ui/select'
 
-interface OptionFieldProps<T> {
+interface OptionFieldProps<
+  T extends string | number | readonly string[] | undefined | null,
+> {
   label: string
   value: T
   onChange: (value: T) => void
@@ -24,7 +26,9 @@ interface OptionFieldProps<T> {
   }
 }
 
-export function OptionField<T>({
+export function OptionField<
+  T extends string | number | readonly string[] | undefined | null,
+>({
   label,
   value,
   onChange,
@@ -36,9 +40,9 @@ export function OptionField<T>({
 }: OptionFieldProps<T>) {
   const inputProps = {
     id: label,
-    value,
+    value: value as string | number | readonly string[] | undefined,
     onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
-      onChange(e.target.value),
+      onChange(e.target.value as T),
     placeholder,
     readOnly,
     className: 'flex-grow',
@@ -49,7 +53,10 @@ export function OptionField<T>({
       <Label htmlFor={label}>{label}</Label>
       <div className="flex items-center space-x-2">
         {type === 'select' ? (
-          <Select value={value} onValueChange={onChange}>
+          <Select
+            value={String(value)}
+            onValueChange={(newValue) => onChange(newValue as T)}
+          >
             <SelectTrigger className="w-full">
               <SelectValue placeholder={placeholder} />
             </SelectTrigger>

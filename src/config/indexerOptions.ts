@@ -5,17 +5,17 @@ export interface IndexerOptions {
   outputDir: string
 
   // Content options
-  blocks: string[] | null
-  timestamps: string[] | null
-  txs: string[] | null
+  blocks: string | string[] | null
+  timestamps: string | string[] | null
+  txs: string | string[] | null
   align: boolean
   reorgBuffer: number
-  includeColumns: string[] | null
-  excludeColumns: string[] | null
-  columns: string[] | null
-  u256Types: string[] | null
+  includeColumns: string | string[] | null
+  excludeColumns: string | string[] | null
+  columns: string | string[] | null
+  u256Types: string | string[] | null
   hex: boolean
-  sort: string[] | null
+  sort: string | string[] | null
   excludeFailed: boolean
 
   // Source options

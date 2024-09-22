@@ -34,13 +34,6 @@ interface DataRow {
   [key: string]: string | number | boolean | null
 }
 
-interface Column {
-  name: string
-  datatype: string
-  bit_settings: string
-  values: (string | number | boolean | null)[]
-}
-
 const ChainAnalyzer: React.FC = () => {
   const {
     selectedDir,
@@ -141,7 +134,7 @@ const ChainAnalyzer: React.FC = () => {
           columns.map((col: string) => ({
             accessorKey: col,
             header: col,
-            cell: (info: any) => {
+            cell: (info: { getValue: () => unknown }) => {
               const value = info.getValue()
               return typeof value === 'string' &&
                 value.startsWith('[binary data]')
@@ -154,8 +147,10 @@ const ChainAnalyzer: React.FC = () => {
 
         // Update queryResult
         setQueryResult({
-          schema: columns.map((name) => [name, '']),
-          data: data.map((row) => columns.map((col) => row[col])),
+          schema: columns.map((name: string) => [name, '']),
+          data: data.map((row: DataRow) =>
+            columns.map((col: string) => row[col]),
+          ),
         })
       } else {
         setData([])
