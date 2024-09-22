@@ -6,7 +6,7 @@ use alloy::{
     node_bindings::anvil::{Anvil, AnvilInstance},
 };
 use env_logger::Builder;
-use log::{error, info, LevelFilter};
+use log::{info, LevelFilter};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -48,7 +48,6 @@ fn find_anvil() -> Option<PathBuf> {
 #[tauri::command]
 async fn start_devnet(
     state: tauri::State<'_, Arc<Mutex<DevnetState>>>,
-    app: tauri::AppHandle,
 ) -> Result<DevnetInfo, String> {
     let mut state = state.lock().await;
     if state.instance.is_some() {

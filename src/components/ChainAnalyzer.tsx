@@ -1,13 +1,5 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useChainAnalyzerStore } from '@/stores/chainAnalyzerStore'
 import { sql } from '@codemirror/lang-sql'
@@ -29,24 +21,9 @@ import {
   Search,
 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
-import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  Brush,
-  CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
 import { toast } from 'sonner'
 import type { FileInfo } from '../types/chainAnalyzer'
+import DataVisualizationChart from './DataVisualizationChart'
 import { VirtualizedDataTable } from './VirtualizedDataTable'
 
 interface QueryResult {
@@ -88,8 +65,6 @@ const ChainAnalyzer: React.FC = () => {
   const [xAxis, setXAxis] = useState<string>('')
   const [yAxis, setYAxis] = useState<string>('')
   const [showBrush, setShowBrush] = useState(false)
-  const [showReferenceLine, setShowReferenceLine] = useState(false)
-  const [referenceLineValue, setReferenceLineValue] = useState('')
   const [data, setData] = useState<DataRow[]>([])
   const [columns, setColumns] = useState<string[]>([])
   const [tableColumns, setTableColumns] = useState<
@@ -150,20 +125,15 @@ const ChainAnalyzer: React.FC = () => {
       const parsedData = JSON.parse(result.json)
       console.log('Parsed data:', parsedData)
 
-      if (parsedData.columns && parsedData.columns.length > 0) {
-        const columns = parsedData.columns.map((col: Column) => col.name)
-        const data = parsedData.columns[0].values.map(
-          (_: unknown, index: number) => {
-            const row: { [key: string]: unknown } = {}
-            for (const col of parsedData.columns) {
-              row[col.name] =
-                col.values[index] && typeof col.values[index] === 'object'
-                  ? Object.values(col.values[index])[0]
-                  : col.values[index]
-            }
-            return row
-          },
-        )
+      if (parsedData[0] && parsedData[0].length > 0) {
+        const columns = parsedData[0].map((col: [string, unknown[]]) => col[0])
+        const data = parsedData[0][0][1].map((_: unknown, index: number) => {
+          const row: { [key: string]: unknown } = {}
+          for (const col of parsedData[0]) {
+            row[col[0]] = col[1][index]
+          }
+          return row
+        })
 
         setColumns(columns)
         setData(data)
@@ -171,16 +141,22 @@ const ChainAnalyzer: React.FC = () => {
           columns.map((col: string) => ({
             accessorKey: col,
             header: col,
-            cell: (info) => {
+            cell: (info: any) => {
               const value = info.getValue()
-              // 对于二进制数据（地址），保持原样显示
-              return typeof value === 'string' && value.startsWith('0x')
+              return typeof value === 'string' &&
+                value.startsWith('[binary data]')
                 ? value
                 : JSON.stringify(value)
             },
           })),
         )
         setQueryTime(performance.now() - startTime)
+
+        // Update queryResult
+        setQueryResult({
+          schema: columns.map((name) => [name, '']),
+          data: data.map((row) => columns.map((col) => row[col])),
+        })
       } else {
         setData([])
         setColumns([])
@@ -197,7 +173,7 @@ const ChainAnalyzer: React.FC = () => {
     } finally {
       setIsLoading(false)
     }
-  }, [sqlQuery, files, setQueryError, setQueryTime])
+  }, [sqlQuery, files, setQueryError, setQueryTime, setQueryResult])
 
   const previewFile = async (filePath: string) => {
     try {
@@ -251,102 +227,19 @@ const ChainAnalyzer: React.FC = () => {
   const renderChart = () => {
     if (!data || !xAxis || !yAxis) return null
 
-    const ChartComponent =
-      chartType === 'bar'
-        ? BarChart
-        : chartType === 'line'
-          ? LineChart
-          : AreaChart
-
     return (
-      <>
-        <div className="flex items-center space-x-4 mb-4">
-          <div className="flex items-center space-x-2">
-            <Label htmlFor="x-axis">X Axis:</Label>
-            <Select value={xAxis} onValueChange={setXAxis}>
-              <SelectTrigger id="x-axis" className="w-[180px]">
-                <SelectValue placeholder="Select X Axis" />
-              </SelectTrigger>
-              <SelectContent>
-                {columns.map((column) => (
-                  <SelectItem key={column} value={column}>
-                    {column}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Label htmlFor="y-axis">Y Axis:</Label>
-            <Select value={yAxis} onValueChange={setYAxis}>
-              <SelectTrigger id="y-axis" className="w-[180px]">
-                <SelectValue placeholder="Select Y Axis" />
-              </SelectTrigger>
-              <SelectContent>
-                {columns.map((column) => (
-                  <SelectItem key={column} value={column}>
-                    {column}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <div className="flex items-center space-x-4 mb-4">
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="show-brush"
-              checked={showBrush}
-              onChange={(e) => setShowBrush(e.target.checked)}
-            />
-            <Label htmlFor="show-brush">Show Brush</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="show-reference-line"
-              checked={showReferenceLine}
-              onChange={(e) => setShowReferenceLine(e.target.checked)}
-            />
-            <Label htmlFor="show-reference-line">Show Reference Line</Label>
-          </div>
-          {showReferenceLine && (
-            <Input
-              type="number"
-              placeholder="Reference Line Value"
-              value={referenceLineValue}
-              onChange={(e) => setReferenceLineValue(e.target.value)}
-              className="w-32"
-            />
-          )}
-        </div>
-        <ResponsiveContainer width="100%" height={300}>
-          <ChartComponent data={data}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey={xAxis} />
-            <YAxis dataKey={yAxis} />
-            <Tooltip />
-            <Legend />
-            {chartType === 'bar' && <Bar dataKey={yAxis} fill="#8884d8" />}
-            {chartType === 'line' && (
-              <Line type="monotone" dataKey={yAxis} stroke="#8884d8" />
-            )}
-            {chartType === 'area' && (
-              <Area type="monotone" dataKey={yAxis} fill="#8884d8" />
-            )}
-            {showBrush && (
-              <Brush dataKey={xAxis} height={30} stroke="#8884d8" />
-            )}
-            {showReferenceLine && (
-              <ReferenceLine
-                y={Number.parseFloat(referenceLineValue)}
-                stroke="red"
-              />
-            )}
-          </ChartComponent>
-        </ResponsiveContainer>
-      </>
+      <DataVisualizationChart
+        data={data}
+        columns={columns}
+        chartType={chartType}
+        setChartType={setChartType}
+        xAxis={xAxis}
+        setXAxis={setXAxis}
+        yAxis={yAxis}
+        setYAxis={setYAxis}
+        showBrush={showBrush}
+        setShowBrush={setShowBrush}
+      />
     )
   }
 
@@ -476,24 +369,7 @@ const ChainAnalyzer: React.FC = () => {
                   <VirtualizedDataTable columns={tableColumns} data={data} />
                 </TabsContent>
                 <TabsContent value="chart" className="flex-1 overflow-auto p-4">
-                  <div className="flex items-center space-x-2 text-xs mb-2">
-                    <Select
-                      value={chartType}
-                      onValueChange={(value) =>
-                        setChartType(value as 'bar' | 'line' | 'area')
-                      }
-                    >
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Select a chart type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="bar">Bar Chart</SelectItem>
-                        <SelectItem value="line">Line Chart</SelectItem>
-                        <SelectItem value="area">Area Chart</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="h-[300px]">{renderChart()}</div>
+                  <div className="h-full">{renderChart()}</div>
                 </TabsContent>
               </Tabs>
             </div>

@@ -29,10 +29,7 @@ cryo_cli = "0.3.2"
 log = "0.4"
 env_logger = "0.10"
 duckdb = { version = "1.0.0", features = ["bundled", "polars"] }
-base64 = "0.21.0"
-polars = { version = "0.35.4", features = ["json", "serde"] }
-polars-core = { version = "0.35.4" }
-hex = "0.4.3"
+
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!

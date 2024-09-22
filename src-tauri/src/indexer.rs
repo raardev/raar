@@ -1,6 +1,6 @@
 use cryo_cli::{run, Args};
 use cryo_freeze::FreezeSummary;
-use log::{debug, error, info, Metadata, Record};
+use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -22,9 +22,9 @@ pub struct IndexerState {
 #[serde(rename_all = "camelCase")]
 pub struct IndexerOptions {
     // Basic options
-    pub datatype: Vec<String>,
+    // pub datatype: Vec<String>,
     pub rpc: Option<String>,
-    pub output_dir: String,
+    // pub output_dir: String,
 
     // Content options
     pub blocks: Option<Vec<String>>,
@@ -287,25 +287,6 @@ impl IndexerTool {
     pub fn subscribe_to_logs(&self) -> broadcast::Receiver<String> {
         self.log_sender.subscribe()
     }
-}
-
-struct CryoLogger {
-    sender: broadcast::Sender<String>,
-}
-
-impl log::Log for CryoLogger {
-    fn enabled(&self, metadata: &Metadata) -> bool {
-        metadata.level() <= log::Level::Info
-    }
-
-    fn log(&self, record: &Record) {
-        if self.enabled(record.metadata()) {
-            let log_message = format!("{}: {}", record.level(), record.args());
-            let _ = self.sender.send(log_message);
-        }
-    }
-
-    fn flush(&self) {}
 }
 
 #[derive(Debug, Serialize, Clone)]
