@@ -130,6 +130,70 @@ export const commonMethods: RPCMethod[] = [
     method: 'txpool_content',
     params: [],
   },
+
+  // Anvil-specific methods
+  {
+    method: 'anvil_impersonateAccount',
+    params: ['0x742d35Cc6634C0532925a3b844Bc454e4438f44e'],
+  },
+  {
+    method: 'anvil_stopImpersonatingAccount',
+    params: ['0x742d35Cc6634C0532925a3b844Bc454e4438f44e'],
+  },
+  { method: 'anvil_autoImpersonateAccount', params: [true] },
+  { method: 'anvil_getAutomine', params: [] },
+  { method: 'anvil_mine', params: [1, 0] },
+  {
+    method: 'anvil_dropTransaction',
+    params: [
+      '0xc31d7e7e85cab1d38ce1b8ac17e821ccd47dbde00f9d57f2bd8613bff9428396',
+    ],
+  },
+  {
+    method: 'anvil_reset',
+    params: [
+      {
+        forking: {
+          jsonRpcUrl: 'https://mainnet.infura.io/v3/YOUR-PROJECT-ID',
+          blockNumber: 12345678,
+        },
+      },
+    ],
+  },
+  {
+    method: 'anvil_setRpcUrl',
+    params: ['https://mainnet.infura.io/v3/YOUR-PROJECT-ID'],
+  },
+  {
+    method: 'anvil_setBalance',
+    params: [
+      '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+      '0x1000000000000000000',
+    ],
+  },
+  {
+    method: 'anvil_setCode',
+    params: ['0x742d35Cc6634C0532925a3b844Bc454e4438f44e', '0x60806040...'],
+  },
+  {
+    method: 'anvil_setNonce',
+    params: ['0x742d35Cc6634C0532925a3b844Bc454e4438f44e', '0x1'],
+  },
+  {
+    method: 'anvil_setStorageAt',
+    params: ['0x742d35Cc6634C0532925a3b844Bc454e4438f44e', '0x0', '0x1'],
+  },
+  {
+    method: 'anvil_setCoinbase',
+    params: ['0x742d35Cc6634C0532925a3b844Bc454e4438f44e'],
+  },
+  { method: 'anvil_setLoggingEnabled', params: [true] },
+  { method: 'anvil_setMinGasPrice', params: ['0x1'] },
+  { method: 'anvil_setNextBlockBaseFeePerGas', params: ['0x1'] },
+  { method: 'anvil_setChainId', params: [1] },
+  { method: 'anvil_dumpState', params: [] },
+  { method: 'anvil_loadState', params: ['0x...'] }, // Replace with actual state hex string
+  { method: 'anvil_nodeInfo', params: [] },
 ]
 
 export const defaultParams: Record<string, string> = Object.fromEntries(
