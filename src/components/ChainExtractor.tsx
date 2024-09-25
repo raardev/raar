@@ -9,8 +9,8 @@ import type React from 'react'
 import { useCallback, useEffect, useMemo } from 'react'
 import { toast } from 'sonner'
 import type { IndexerOptions } from '../config/indexerOptions'
-import type { CompactFreezeSummary, IndexerState } from '../store/indexerStore'
-import { useIndexerStore } from '../store/indexerStore'
+import type { CompactFreezeSummary, IndexerState } from '../stores/indexerStore'
+import { useIndexerStore } from '../stores/indexerStore'
 import AdvancedSettingsDialog, {
   convertOptionsToBackend,
 } from './AdvancedSettingsDialog'

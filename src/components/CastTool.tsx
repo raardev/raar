@@ -1,6 +1,15 @@
 import { invoke } from '@tauri-apps/api/tauri'
 import { HelpCircle, PlayIcon, XIcon } from 'lucide-react'
+import type React from 'react'
 import { useState } from 'react'
+import { useCastToolStore } from '../stores/castToolStore'
+import RPCInput from './RPCInput'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from './ui/accordion'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
@@ -8,13 +17,15 @@ import { ScrollArea } from './ui/scroll-area'
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
 interface CastCommandProps {
+  id: number
   name: string
   description: string
   args: string[]
-  onRemove: () => void
+  onRemove: (id: number) => void
 }
 
 const CastCommand: React.FC<CastCommandProps> = ({
+  id,
   name,
   description,
   args,
@@ -24,9 +35,11 @@ const CastCommand: React.FC<CastCommandProps> = ({
   const [output, setOutput] = useState<string>('')
 
   const handleInputChange = (index: number, value: string) => {
-    const newInputs = [...inputs]
-    newInputs[index] = value
-    setInputs(newInputs)
+    setInputs((prev) => {
+      const newInputs = [...prev]
+      newInputs[index] = value
+      return newInputs
+    })
   }
 
   const runCommand = async () => {
@@ -61,23 +74,36 @@ const CastCommand: React.FC<CastCommandProps> = ({
           <Button variant="ghost" size="icon" onClick={runCommand}>
             <PlayIcon className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={onRemove}>
+          <Button variant="ghost" size="icon" onClick={() => onRemove(id)}>
             <XIcon className="h-4 w-4" />
           </Button>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-1">
         {args.map((arg, index) => (
-          <div key={`${name}-${arg}-${index}`}>
-            <Label htmlFor={`${name}-${arg}-${index}`} className="text-xs">
+          <div key={`${id}-${arg}-${index}`}>
+            <Label htmlFor={`${id}-${arg}-${index}`} className="text-xs">
               {arg}
             </Label>
-            <Input
-              id={`${name}-${arg}-${index}`}
-              value={inputs[index]}
-              onChange={(e) => handleInputChange(index, e.target.value)}
-              className="h-6 text-xs"
-            />
+            {arg.toLowerCase() === 'rpc' ? (
+              <RPCInput
+                value={inputs[index]}
+                onChange={(value) => handleInputChange(index, value)}
+                placeholder={`Enter ${arg}`}
+                className="h-6 text-xs"
+              />
+            ) : (
+              <Input
+                id={`${id}-${arg}-${index}`}
+                value={inputs[index]}
+                onChange={(e) => handleInputChange(index, e.target.value)}
+                className="h-6 text-xs"
+                autoComplete="off"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck="false"
+              />
+            )}
           </div>
         ))}
       </div>
@@ -94,11 +120,14 @@ const CastCommand: React.FC<CastCommandProps> = ({
 }
 
 const CastTool: React.FC = () => {
-  const [activeCommands, setActiveCommands] = useState<
-    Array<{ name: string; id: number }>
-  >([])
-  const [nextId, setNextId] = useState(0)
-  const [searchTerm, setSearchTerm] = useState('')
+  const {
+    activeCommands,
+    searchTerm,
+    addCommand,
+    removeCommand,
+    clearAllCommands,
+    setSearchTerm,
+  } = useCastToolStore()
 
   const castCommands = [
     {
@@ -434,22 +463,92 @@ const CastTool: React.FC = () => {
     },
   ]
 
-  const filteredCommands = castCommands.filter((cmd) =>
-    cmd.name.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
-
-  const addCommand = (name: string) => {
-    setActiveCommands([...activeCommands, { name, id: nextId }])
-    setNextId(nextId + 1)
-  }
-
-  const removeCommand = (id: number) => {
-    setActiveCommands(activeCommands.filter((cmd) => cmd.id !== id))
-  }
-
-  const clearAllCommands = () => {
-    setActiveCommands([])
-  }
+  const commandCategories = [
+    {
+      name: 'Blockchain & RPC Queries',
+      commands: [
+        'age',
+        'balance',
+        'base-fee',
+        'block',
+        'block-number',
+        'chain',
+        'chain-id',
+        'client',
+        'code',
+        'codesize',
+        'compute-address',
+        'gas-price',
+        'implementation',
+        'admin',
+        'nonce',
+        'storage',
+        'proof',
+        'receipt',
+      ],
+    },
+    {
+      name: 'Constants & Conversions',
+      commands: [
+        'max-int',
+        'min-int',
+        'max-uint',
+        'address-zero',
+        'hash-zero',
+        'from-utf8',
+        'to-ascii',
+        'to-utf8',
+        'from-fixed-point',
+        'to-fixed-point',
+        'concat-hex',
+        'from-bin',
+        'to-hex-data',
+        'to-checksum-address',
+        'to-uint256',
+        'to-int256',
+        'to-unit',
+        'from-wei',
+        'to-wei',
+        'from-rlp',
+        'to-rlp',
+        'to-hex',
+        'to-dec',
+        'to-base',
+        'to-bytes32',
+        'format-bytes32-string',
+        'parse-bytes32-string',
+        'parse-bytes32-address',
+      ],
+    },
+    {
+      name: 'ABI Encoding & Decoding',
+      commands: [
+        'abi-decode',
+        'abi-encode',
+        'calldata-decode',
+        'calldata-encode',
+      ],
+    },
+    {
+      name: 'ENS',
+      commands: ['namehash', 'lookup-address', 'resolve-name'],
+    },
+    {
+      name: 'Misc',
+      commands: [
+        'keccak',
+        'hash-message',
+        'sig-event',
+        'left-shift',
+        'right-shift',
+        'disassemble',
+        'index',
+        'index-erc7201',
+        'decode-transaction',
+        'decode-eof',
+      ],
+    },
+  ]
 
   return (
     <div className="flex h-full">
@@ -461,16 +560,43 @@ const CastTool: React.FC = () => {
           className="mb-4"
         />
         <ScrollArea className="h-[calc(100vh-8rem)]">
-          {filteredCommands.map((cmd) => (
-            <Button
-              key={cmd.name}
-              onClick={() => addCommand(cmd.name)}
-              className="w-full justify-start mb-2 text-left"
-              variant="ghost"
-            >
-              {cmd.name}
-            </Button>
-          ))}
+          <Accordion type="multiple" className="w-full">
+            {commandCategories.map((category) => (
+              <AccordionItem value={category.name} key={category.name}>
+                <AccordionTrigger>{category.name}</AccordionTrigger>
+                <AccordionContent>
+                  {category.commands
+                    .filter((cmd) =>
+                      cmd.toLowerCase().includes(searchTerm.toLowerCase()),
+                    )
+                    .map((cmd) => {
+                      const commandConfig = castCommands.find(
+                        (c) => c.name === cmd,
+                      )
+                      if (!commandConfig) return null
+                      return (
+                        <Button
+                          key={cmd}
+                          onClick={() => addCommand(cmd)}
+                          className="w-full justify-start mb-2 text-left"
+                          variant="ghost"
+                        >
+                          {cmd}
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <HelpCircle className="h-3 w-3 text-muted-foreground ml-1" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{commandConfig.description}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </Button>
+                      )
+                    })}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
         </ScrollArea>
       </div>
       <div className="w-2/3 pl-4">
@@ -481,16 +607,17 @@ const CastTool: React.FC = () => {
           </Button>
         </div>
         <ScrollArea className="h-[calc(100vh-8rem)]">
-          {activeCommands.map((cmd, index) => {
+          {activeCommands.map((cmd) => {
             const commandConfig = castCommands.find((c) => c.name === cmd.name)
             if (!commandConfig) return null
             return (
               <CastCommand
                 key={cmd.id}
+                id={cmd.id}
                 name={cmd.name}
                 description={commandConfig.description}
                 args={commandConfig.args}
-                onRemove={() => removeCommand(cmd.id)}
+                onRemove={removeCommand}
               />
             )
           })}

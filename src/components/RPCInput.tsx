@@ -6,12 +6,14 @@ interface RPCInputProps {
   value: string
   onChange: (value: string) => void
   placeholder?: string
+  className?: string
 }
 
 const RPCInput: React.FC<RPCInputProps> = ({
   value,
   onChange,
   placeholder = 'Enter RPC URL',
+  className = '',
 }) => {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [inputValue, setInputValue] = useState(value)
@@ -73,7 +75,7 @@ const RPCInput: React.FC<RPCInputProps> = ({
         value={inputValue}
         onChange={(e) => handleRPCChange(e.target.value)}
         onFocus={() => setShowSuggestions(true)}
-        className="w-full"
+        className={`w-full ${className}`}
         autoComplete="off"
         autoCapitalize="off"
         autoCorrect="off"
