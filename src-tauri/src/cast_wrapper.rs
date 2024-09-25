@@ -1,11 +1,13 @@
 use alloy_primitives::{eip191_hash_message, hex, Address, B256};
+use alloy_provider::Provider;
 use alloy_rpc_types::{BlockId, BlockNumberOrTag};
 use eyre::Result;
-use foundry_cast::SimpleCast;
+use foundry_cast::{Cast, SimpleCast};
 use foundry_common::{
     abi::get_event,
     ens::{namehash, ProviderEnsExt},
-    fmt::format_tokens_raw,
+    fmt::{format_tokens_raw, format_uint_exp},
+    provider::{ProviderBuilder, RetryProvider},
     selectors::{
         decode_calldata, decode_event_topic, decode_function_selector, decode_selectors,
         import_selectors, parse_signatures, pretty_calldata, ParsedSignatures, SelectorImportData,
@@ -14,6 +16,7 @@ use foundry_common::{
 };
 use serde_json;
 use std::str::FromStr;
+use std::sync::Arc;
 
 pub struct CastWrapper;
 
@@ -161,8 +164,227 @@ impl CastWrapper {
         SimpleCast::calldata_encode(sig, args)
     }
 
+    // Helper function to create a provider
+    async fn get_provider(rpc: &str) -> Result<Arc<RetryProvider>> {
+        let provider = ProviderBuilder::new(rpc).build()?;
+        Ok(Arc::new(provider))
+    }
+
     // Blockchain & RPC queries
-    // Note: These methods would typically require a provider, which we don't have in this wrapper.
+    pub async fn age(rpc: &str, block: Option<BlockId>) -> Result<String> {
+        let provider = Self::get_provider(rpc).await?;
+        let cast = Cast::new(provider);
+        Ok(cast
+            .age(block.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)))
+            .await?
+            .to_string())
+    }
+
+    pub async fn balance(
+        rpc: &str,
+        who: &str,
+        block: Option<BlockId>,
+        ether: bool,
+        erc20: Option<Address>,
+    ) -> Result<String> {
+        let provider = Self::get_provider(rpc).await?;
+        let cast = Cast::new(provider);
+        let account_addr = Address::from_str(who)?;
+
+        match erc20 {
+            Some(token) => {
+                let balance = cast.erc20_balance(token, account_addr, block).await?;
+                Ok(format_uint_exp(balance))
+            }
+            None => {
+                let value = cast.balance(account_addr, block).await?;
+                if ether {
+                    SimpleCast::from_wei(&value.to_string(), "eth")
+                } else {
+                    Ok(value.to_string())
+                }
+            }
+        }
+    }
+
+    pub async fn base_fee(rpc: &str, block: Option<BlockId>) -> Result<String> {
+        let provider = Self::get_provider(rpc).await?;
+        let cast = Cast::new(provider);
+        Ok(cast
+            .base_fee(block.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)))
+            .await?
+            .to_string())
+    }
+
+    pub async fn block(
+        rpc: &str,
+        block: Option<BlockId>,
+        full: bool,
+        field: Option<String>,
+        json: bool,
+    ) -> Result<String> {
+        let provider = Self::get_provider(rpc).await?;
+        let cast = Cast::new(provider);
+        cast.block(
+            block.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)),
+            full,
+            field,
+            json,
+        )
+        .await
+    }
+
+    pub async fn block_number(rpc: &str) -> Result<String> {
+        let provider = Self::get_provider(rpc).await?;
+        let cast = Cast::new(provider);
+        Ok(cast.block_number().await?.to_string())
+    }
+
+    pub async fn chain(rpc: &str) -> Result<String> {
+        let provider = Self::get_provider(rpc).await?;
+        let cast = Cast::new(provider);
+        Ok(cast.chain().await?.to_string())
+    }
+
+    pub async fn chain_id(rpc: &str) -> Result<String> {
+        let provider = Self::get_provider(rpc).await?;
+        let cast = Cast::new(provider);
+        Ok(cast.chain_id().await?.to_string())
+    }
+
+    pub async fn client(rpc: &str) -> Result<String> {
+        let provider = Self::get_provider(rpc).await?;
+        Ok(provider.get_client_version().await?.to_string())
+    }
+
+    pub async fn code(
+        rpc: &str,
+        who: &str,
+        block: Option<BlockId>,
+        disassemble: bool,
+    ) -> Result<String> {
+        let provider = Self::get_provider(rpc).await?;
+        let cast = Cast::new(provider);
+        let address = Address::from_str(who)?;
+        cast.code(address, block, disassemble).await
+    }
+
+    pub async fn codesize(rpc: &str, who: &str, block: Option<BlockId>) -> Result<String> {
+        let provider = Self::get_provider(rpc).await?;
+        let cast = Cast::new(provider);
+        let address = Address::from_str(who)?;
+        Ok(cast.codesize(address, block).await?.to_string())
+    }
+
+    pub async fn compute_address(rpc: &str, address: &str, nonce: Option<u64>) -> Result<String> {
+        let provider = Self::get_provider(rpc).await?;
+        let cast = Cast::new(provider);
+        let address = Address::from_str(address)?;
+        let computed = cast.compute_address(address, nonce).await?;
+        Ok(computed.to_checksum(None))
+    }
+
+    pub async fn gas_price(rpc: &str) -> Result<String> {
+        let provider = Self::get_provider(rpc).await?;
+        let cast = Cast::new(provider);
+        Ok(cast.gas_price().await?.to_string())
+    }
+
+    pub async fn implementation(rpc: &str, who: &str, block: Option<BlockId>) -> Result<String> {
+        let provider = Self::get_provider(rpc).await?;
+        let cast = Cast::new(provider);
+        let address = Address::from_str(who)?;
+        cast.implementation(address, block).await
+    }
+
+    pub async fn admin(rpc: &str, who: &str, block: Option<BlockId>) -> Result<String> {
+        let provider = Self::get_provider(rpc).await?;
+        let cast = Cast::new(provider);
+        let address = Address::from_str(who)?;
+        cast.admin(address, block).await
+    }
+
+    pub async fn nonce(rpc: &str, who: &str, block: Option<BlockId>) -> Result<String> {
+        let provider = Self::get_provider(rpc).await?;
+        let cast = Cast::new(provider);
+        let address = Address::from_str(who)?;
+        Ok(cast.nonce(address, block).await?.to_string())
+    }
+
+    pub async fn codehash(
+        rpc: &str,
+        who: &str,
+        slots: Vec<String>,
+        block: Option<BlockId>,
+    ) -> Result<String> {
+        let provider = Self::get_provider(rpc).await?;
+        let cast = Cast::new(provider);
+        let address = Address::from_str(who)?;
+        let slots: Vec<B256> = slots
+            .into_iter()
+            .map(|s| B256::from_str(&s).unwrap())
+            .collect();
+        Ok(cast.codehash(address, slots, block).await?.to_string())
+    }
+
+    pub async fn storage_root(
+        rpc: &str,
+        who: &str,
+        slots: Vec<String>,
+        block: Option<BlockId>,
+    ) -> Result<String> {
+        let provider = Self::get_provider(rpc).await?;
+        let cast = Cast::new(provider);
+        let address = Address::from_str(who)?;
+        let slots: Vec<B256> = slots
+            .into_iter()
+            .map(|s| B256::from_str(&s).unwrap())
+            .collect();
+        Ok(cast.storage_root(address, slots, block).await?.to_string())
+    }
+
+    pub async fn proof(
+        rpc: &str,
+        address: &str,
+        slots: Vec<String>,
+        block: Option<BlockId>,
+    ) -> Result<String> {
+        let provider = Self::get_provider(rpc).await?;
+        let address = Address::from_str(address)?;
+        let slots: Vec<B256> = slots
+            .into_iter()
+            .map(|s| B256::from_str(&s).unwrap())
+            .collect();
+        let value = provider
+            .get_proof(address, slots)
+            .block_id(block.unwrap_or_default())
+            .await?;
+        Ok(serde_json::to_string(&value)?)
+    }
+
+    // Calls & transactions
+    pub async fn receipt(
+        rpc: &str,
+        tx_hash: &str,
+        field: Option<String>,
+        confirmations: Option<u64>,
+        json: bool,
+        cast_async: bool,
+    ) -> Result<String> {
+        let provider = Self::get_provider(rpc).await?;
+        let cast = Cast::new(provider);
+        Ok(cast
+            .receipt(
+                tx_hash.to_string(),
+                field,
+                confirmations.unwrap_or(0),
+                None,
+                cast_async,
+                json,
+            )
+            .await?
+            .to_string())
+    }
 
     // Misc
     pub fn keccak(data: &str) -> Result<String> {
@@ -248,5 +470,41 @@ impl CastWrapper {
 
     pub fn decode_eof(eof: &str) -> Result<String> {
         SimpleCast::decode_eof(eof)
+    }
+
+    // ENS
+    pub fn namehash(name: &str) -> String {
+        namehash(name).to_string()
+    }
+
+    pub async fn lookup_address(rpc: &str, who: &str, verify: bool) -> Result<String> {
+        let provider = Self::get_provider(rpc).await?;
+        let address = Address::from_str(who)?;
+        let name = provider.lookup_address(&address).await?;
+
+        if verify {
+            let resolved_address = provider.resolve_name(&name).await?;
+            eyre::ensure!(
+                resolved_address == address,
+                "Reverse lookup verification failed: got `{resolved_address}`, expected `{address}`"
+            );
+        }
+
+        Ok(name)
+    }
+
+    pub async fn resolve_name(rpc: &str, who: &str, verify: bool) -> Result<String> {
+        let provider = Self::get_provider(rpc).await?;
+        let address = provider.resolve_name(who).await?;
+
+        if verify {
+            let name = provider.lookup_address(&address).await?;
+            eyre::ensure!(
+                name == who,
+                "Forward lookup verification failed: got `{name}`, expected `{who}`"
+            );
+        }
+
+        Ok(address.to_string())
     }
 }

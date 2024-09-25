@@ -106,7 +106,6 @@ dependencies = [
  "alloy-node-bindings",
  "alloy-provider 0.2.1",
  "alloy-rpc-client 0.2.1",
- "alloy-rpc-types 0.2.1",
  "alloy-serde 0.2.1",
  "alloy-transport-http 0.2.1",
 ]
@@ -642,17 +641,6 @@ dependencies = [
  "tower 0.5.1",
  "tracing",
  "url",
-]
-
-[[package]]
-name = "alloy-rpc-types"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e6c31a3750b8f5a350d17354e46a52b0f2f19ec5f2006d816935af599dedc521"
-dependencies = [
- "alloy-rpc-types-eth 0.2.1",
- "alloy-serde 0.2.1",
- "serde",
 ]
 
 [[package]]
@@ -4264,7 +4252,7 @@ dependencies = [
  "alloy-primitives 0.8.3",
  "alloy-provider 0.3.6",
  "alloy-rlp",
- "alloy-rpc-types 0.3.6",
+ "alloy-rpc-types",
  "alloy-serde 0.3.6",
  "alloy-signer 0.3.6",
  "alloy-signer-local 0.3.6",
@@ -4316,7 +4304,7 @@ dependencies = [
  "alloy-primitives 0.8.3",
  "alloy-provider 0.3.6",
  "alloy-rlp",
- "alloy-rpc-types 0.3.6",
+ "alloy-rpc-types",
  "alloy-signer 0.3.6",
  "alloy-signer-local 0.3.6",
  "alloy-sol-types 0.8.3",
@@ -4408,7 +4396,7 @@ dependencies = [
  "alloy-provider 0.3.6",
  "alloy-pubsub",
  "alloy-rpc-client 0.3.6",
- "alloy-rpc-types 0.3.6",
+ "alloy-rpc-types",
  "alloy-serde 0.3.6",
  "alloy-sol-types 0.8.3",
  "alloy-transport 0.3.6",
@@ -4447,7 +4435,7 @@ dependencies = [
  "alloy-consensus 0.3.6",
  "alloy-dyn-abi 0.8.3",
  "alloy-primitives 0.8.3",
- "alloy-rpc-types 0.3.6",
+ "alloy-rpc-types",
  "alloy-serde 0.3.6",
  "chrono",
  "comfy-table",
@@ -4666,7 +4654,7 @@ dependencies = [
  "alloy-json-abi 0.8.3",
  "alloy-primitives 0.8.3",
  "alloy-provider 0.3.6",
- "alloy-rpc-types 0.3.6",
+ "alloy-rpc-types",
  "alloy-serde 0.3.6",
  "alloy-sol-types 0.8.3",
  "alloy-transport 0.3.6",
@@ -4771,7 +4759,7 @@ checksum = "c3ab0b0379d1838fa1f0da521ffbbac168aaf113498ea8d6c9650195cadfa736"
 dependencies = [
  "alloy-primitives 0.8.3",
  "alloy-provider 0.3.6",
- "alloy-rpc-types 0.3.6",
+ "alloy-rpc-types",
  "alloy-serde 0.3.6",
  "alloy-transport 0.3.6",
  "eyre",
@@ -8576,7 +8564,8 @@ version = "0.3.0"
 dependencies = [
  "alloy",
  "alloy-primitives 0.8.3",
- "alloy-rpc-types 0.3.6",
+ "alloy-provider 0.3.6",
+ "alloy-rpc-types",
  "color-eyre",
  "cryo_cli",
  "cryo_freeze",

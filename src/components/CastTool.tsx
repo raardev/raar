@@ -302,6 +302,136 @@ const CastTool: React.FC = () => {
       description: 'Decode EOF bytecode',
       args: ['bytecode'],
     },
+
+    // Blockchain & RPC queries
+    {
+      name: 'age',
+      description: 'Get the age of a block',
+      args: ['rpc', 'block (optional)'],
+    },
+    {
+      name: 'balance',
+      description: 'Get the balance of an account',
+      args: [
+        'rpc',
+        'who',
+        'block (optional)',
+        'ether (true/false)',
+        'erc20 (optional)',
+      ],
+    },
+    {
+      name: 'base-fee',
+      description: 'Get the base fee of a block',
+      args: ['rpc', 'block (optional)'],
+    },
+    {
+      name: 'block',
+      description: 'Get information about a block',
+      args: [
+        'rpc',
+        'block (optional)',
+        'full (true/false)',
+        'field (optional)',
+        'json (true/false)',
+      ],
+    },
+    {
+      name: 'block-number',
+      description: 'Get the latest block number',
+      args: ['rpc'],
+    },
+    {
+      name: 'chain',
+      description: 'Get the current chain',
+      args: ['rpc'],
+    },
+    {
+      name: 'chain-id',
+      description: 'Get the current chain ID',
+      args: ['rpc'],
+    },
+    {
+      name: 'client',
+      description: 'Get the current client version',
+      args: ['rpc'],
+    },
+    {
+      name: 'code',
+      description: 'Get the bytecode of a contract',
+      args: ['rpc', 'who', 'block (optional)', 'disassemble (true/false)'],
+    },
+    {
+      name: 'codesize',
+      description: 'Get the bytecode size of a contract',
+      args: ['rpc', 'who', 'block (optional)'],
+    },
+    {
+      name: 'compute-address',
+      description: 'Compute the address for a given deployer and nonce',
+      args: ['rpc', 'address', 'nonce (optional)'],
+    },
+    {
+      name: 'gas-price',
+      description: 'Get the current gas price',
+      args: ['rpc'],
+    },
+    {
+      name: 'implementation',
+      description: 'Get the implementation address of a proxy',
+      args: ['rpc', 'who', 'block (optional)'],
+    },
+    {
+      name: 'admin',
+      description: 'Get the admin address of a proxy',
+      args: ['rpc', 'who', 'block (optional)'],
+    },
+    {
+      name: 'nonce',
+      description: 'Get the nonce of an account',
+      args: ['rpc', 'who', 'block (optional)'],
+    },
+    {
+      name: 'storage',
+      description: "Get the raw value of a contract's storage slot",
+      args: ['rpc', 'address', 'slot', 'block (optional)'],
+    },
+    {
+      name: 'proof',
+      description: 'Generate a storage proof for a given storage slot',
+      args: ['rpc', 'address', 'slots', 'block (optional)'],
+    },
+
+    // Calls & transactions
+    {
+      name: 'receipt',
+      description: 'Get the transaction receipt for a given transaction hash',
+      args: [
+        'rpc',
+        'tx_hash',
+        'field (optional)',
+        'confirmations (optional)',
+        'json (true/false)',
+        'cast_async (true/false)',
+      ],
+    },
+
+    // ENS
+    {
+      name: 'namehash',
+      description: 'Calculate the ENS namehash of a name',
+      args: ['name'],
+    },
+    {
+      name: 'lookup-address',
+      description: 'Perform an ENS reverse lookup',
+      args: ['rpc', 'who', 'verify (true/false)'],
+    },
+    {
+      name: 'resolve-name',
+      description: 'Resolve an ENS name to an address',
+      args: ['rpc', 'who', 'verify (true/false)'],
+    },
   ]
 
   const filteredCommands = castCommands.filter((cmd) =>

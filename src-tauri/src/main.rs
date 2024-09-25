@@ -361,6 +361,129 @@ async fn run_cast_command(command: CastCommand) -> Result<CommandResult, String>
         }
         "decode-eof" => CastWrapper::decode_eof(&command.args[0]).map_err(|e| e.to_string())?,
 
+        // Blockchain & RPC queries
+        "age" => {
+            let block = command.args.get(1).and_then(|s| s.parse().ok());
+            CastWrapper::age(&command.args[0], block)
+                .await
+                .map_err(|e| e.to_string())?
+        }
+        "balance" => {
+            let block = command.args.get(2).and_then(|s| s.parse().ok());
+            let ether = command.args.get(3).map_or(false, |s| s == "true");
+            let erc20 = command.args.get(4).and_then(|s| s.parse().ok());
+            CastWrapper::balance(&command.args[0], &command.args[1], block, ether, erc20)
+                .await
+                .map_err(|e| e.to_string())?
+        }
+        "base-fee" => {
+            let block = command.args.get(1).and_then(|s| s.parse().ok());
+            CastWrapper::base_fee(&command.args[0], block)
+                .await
+                .map_err(|e| e.to_string())?
+        }
+        "block" => {
+            let block = command.args.get(1).and_then(|s| s.parse().ok());
+            let full = command.args.get(2).map_or(false, |s| s == "true");
+            let field = command.args.get(3).cloned();
+            let json = command.args.get(4).map_or(false, |s| s == "true");
+            CastWrapper::block(&command.args[0], block, full, field, json)
+                .await
+                .map_err(|e| e.to_string())?
+        }
+        "block-number" => CastWrapper::block_number(&command.args[0])
+            .await
+            .map_err(|e| e.to_string())?,
+        "chain" => CastWrapper::chain(&command.args[0])
+            .await
+            .map_err(|e| e.to_string())?,
+        "chain-id" => CastWrapper::chain_id(&command.args[0])
+            .await
+            .map_err(|e| e.to_string())?,
+        "client" => CastWrapper::client(&command.args[0])
+            .await
+            .map_err(|e| e.to_string())?,
+        "code" => {
+            let block = command.args.get(2).and_then(|s| s.parse().ok());
+            let disassemble = command.args.get(3).map_or(false, |s| s == "true");
+            CastWrapper::code(&command.args[0], &command.args[1], block, disassemble)
+                .await
+                .map_err(|e| e.to_string())?
+        }
+        "codesize" => {
+            let block = command.args.get(2).and_then(|s| s.parse().ok());
+            CastWrapper::codesize(&command.args[0], &command.args[1], block)
+                .await
+                .map_err(|e| e.to_string())?
+        }
+        "compute-address" => {
+            let nonce = command.args.get(2).and_then(|s| s.parse().ok());
+            CastWrapper::compute_address(&command.args[0], &command.args[1], nonce)
+                .await
+                .map_err(|e| e.to_string())?
+        }
+        "gas-price" => CastWrapper::gas_price(&command.args[0])
+            .await
+            .map_err(|e| e.to_string())?,
+        "implementation" => {
+            let block = command.args.get(2).and_then(|s| s.parse().ok());
+            CastWrapper::implementation(&command.args[0], &command.args[1], block)
+                .await
+                .map_err(|e| e.to_string())?
+        }
+        "admin" => {
+            let block = command.args.get(2).and_then(|s| s.parse().ok());
+            CastWrapper::admin(&command.args[0], &command.args[1], block)
+                .await
+                .map_err(|e| e.to_string())?
+        }
+        "nonce" => {
+            let block = command.args.get(2).and_then(|s| s.parse().ok());
+            CastWrapper::nonce(&command.args[0], &command.args[1], block)
+                .await
+                .map_err(|e| e.to_string())?
+        }
+        "proof" => {
+            let block = command.args.get(3).and_then(|s| s.parse().ok());
+            let slots: Vec<String> = command.args[2].split(',').map(String::from).collect();
+            CastWrapper::proof(&command.args[0], &command.args[1], slots, block)
+                .await
+                .map_err(|e| e.to_string())?
+        }
+
+        // Calls & transactions
+        "receipt" => {
+            let field = command.args.get(2).cloned();
+            let confirmations = command.args.get(3).and_then(|s| s.parse().ok());
+            let json = command.args.get(4).map_or(false, |s| s == "true");
+            let cast_async = command.args.get(5).map_or(false, |s| s == "true");
+            CastWrapper::receipt(
+                &command.args[0],
+                &command.args[1],
+                field,
+                confirmations,
+                json,
+                cast_async,
+            )
+            .await
+            .map_err(|e| e.to_string())?
+        }
+
+        // ENS
+        "namehash" => CastWrapper::namehash(&command.args[0]),
+        "lookup-address" => {
+            let verify = command.args.get(2).map_or(false, |s| s == "true");
+            CastWrapper::lookup_address(&command.args[0], &command.args[1], verify)
+                .await
+                .map_err(|e| e.to_string())?
+        }
+        "resolve-name" => {
+            let verify = command.args.get(2).map_or(false, |s| s == "true");
+            CastWrapper::resolve_name(&command.args[0], &command.args[1], verify)
+                .await
+                .map_err(|e| e.to_string())?
+        }
+
         _ => return Err(format!("Unknown command: {}", command.cmd)),
     };
 
