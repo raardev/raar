@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.4.1] - 2024-09-26
+
+### Fixed
+
+- Remove duplicate description tooltip in cast tool
+
 ## [0.4.0] - 2024-09-25
 
 ### Added

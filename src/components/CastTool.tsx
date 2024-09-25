@@ -582,14 +582,6 @@ const CastTool: React.FC = () => {
                           variant="ghost"
                         >
                           {cmd}
-                          <Tooltip>
-                            <TooltipTrigger>
-                              <HelpCircle className="h-3 w-3 text-muted-foreground ml-1" />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{commandConfig.description}</p>
-                            </TooltipContent>
-                          </Tooltip>
                         </Button>
                       )
                     })}
