@@ -12,6 +12,7 @@ RaaR is a desktop application built with Tauri, React, and TypeScript, designed 
 - **Chain Extractor**: Extract data from the blockchain
 - **Chain Analyzer**: Analyze and visualize blockchain data
 - **Chain List**: View and manage information about different blockchain networks.
+- **Cast**: Foundry Cast GUI
 - **Devnet**: Set up and manage local development networks.
 - **Wallet Generator**: Create and manage Ethereum wallets.
 - **Unit Converter**: Convert between different Ethereum units.

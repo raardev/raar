@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0] - 2024-09-25
+
+### Added
+
+- Cast: Foundry Cast GUI
+- Anvil Methods Templates in RPC Client
+
 ## [0.3.0] - 2024-09-22
 
 ### Added
@@ -54,3 +61,4 @@
 [0.1.1]: https://github.com/raardev/raar/releases/tag/0.1.1
 [0.2.0]: https://github.com/raardev/raar/releases/tag/0.2.0
 [0.3.0]: https://github.com/raardev/raar/releases/tag/0.3.0
+[0.4.0]: https://github.com/raardev/raar/releases/tag/0.4.0
