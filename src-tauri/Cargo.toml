@@ -1,7 +1,7 @@
 [package]
 name = "raar"
 version = "0.3.0"
-description = "Raar"
+description = "RaaR"
 authors = ["daoleno"]
 edition = "2021"
 
@@ -23,13 +23,18 @@ tauri = { version = "1", features = [
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1", features = ["full", "sync"] }
-alloy = { version = "0.2.1", features = ["node-bindings"] }
+alloy = { version = "0.2.1", features = ["node-bindings", "rpc-types"] }
 cryo_freeze = "0.3.2"
 cryo_cli = "0.3.2"
 log = "0.4"
 env_logger = "0.10"
 duckdb = { version = "1.0.0", features = ["bundled", "polars"] }
-
+foundry-cast = { git = "https://github.com/foundry-rs/foundry.git", package = "foundry-cast" }
+foundry-common = { git = "https://github.com/foundry-rs/foundry.git", package = "foundry-common" }
+color-eyre = "0.6.3"
+eyre = "0.6.12"
+alloy-rpc-types = "0.3.6"
+alloy-primitives = "0.8.3"
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!

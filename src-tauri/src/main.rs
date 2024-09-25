@@ -241,6 +241,132 @@ fn execute_query_command(query: &str) -> Result<QueryResult, String> {
     execute_query(query).map_err(|e| e.to_string())
 }
 
+mod cast_wrapper; // Add this line to import the cast_wrapper module
+
+use cast_wrapper::CastWrapper;
+
+#[derive(Debug, Deserialize)]
+struct CastCommand {
+    cmd: String,
+    args: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct CommandResult {
+    output: String,
+}
+
+#[tauri::command]
+async fn run_cast_command(command: CastCommand) -> Result<CommandResult, String> {
+    let result = match command.cmd.as_str() {
+        // Constants
+        "max-int" => CastWrapper::max_int(&command.args[0]).map_err(|e| e.to_string())?,
+        "min-int" => CastWrapper::min_int(&command.args[0]).map_err(|e| e.to_string())?,
+        "max-uint" => CastWrapper::max_uint(&command.args[0]).map_err(|e| e.to_string())?,
+        "address-zero" => CastWrapper::address_zero(),
+        "hash-zero" => CastWrapper::hash_zero(),
+
+        // Conversions & transformations
+        "from-utf8" => CastWrapper::from_utf8(&command.args[0]),
+        "to-ascii" => CastWrapper::to_ascii(&command.args[0]).map_err(|e| e.to_string())?,
+        "to-utf8" => CastWrapper::to_utf8(&command.args[0]).map_err(|e| e.to_string())?,
+        "from-fixed-point" => CastWrapper::from_fixed_point(&command.args[0], &command.args[1])
+            .map_err(|e| e.to_string())?,
+        "to-fixed-point" => CastWrapper::to_fixed_point(&command.args[0], &command.args[1])
+            .map_err(|e| e.to_string())?,
+        "concat-hex" => CastWrapper::concat_hex(command.args.clone()),
+        "from-bin" => CastWrapper::from_bin(&command.args[0].as_bytes()),
+        "to-hex-data" => CastWrapper::to_hex_data(&command.args[0]).map_err(|e| e.to_string())?,
+        "to-checksum-address" => {
+            CastWrapper::to_checksum_address(&command.args[0]).map_err(|e| e.to_string())?
+        }
+        "to-uint256" => CastWrapper::to_uint256(&command.args[0]).map_err(|e| e.to_string())?,
+        "to-int256" => CastWrapper::to_int256(&command.args[0]).map_err(|e| e.to_string())?,
+        "to-unit" => {
+            CastWrapper::to_unit(&command.args[0], &command.args[1]).map_err(|e| e.to_string())?
+        }
+        "from-wei" => {
+            CastWrapper::from_wei(&command.args[0], &command.args[1]).map_err(|e| e.to_string())?
+        }
+        "to-wei" => {
+            CastWrapper::to_wei(&command.args[0], &command.args[1]).map_err(|e| e.to_string())?
+        }
+        "from-rlp" => CastWrapper::from_rlp(&command.args[0]).map_err(|e| e.to_string())?,
+        "to-rlp" => CastWrapper::to_rlp(&command.args[0]).map_err(|e| e.to_string())?,
+        "to-hex" => CastWrapper::to_hex(&command.args[0], command.args.get(1).map(|s| s.as_str()))
+            .map_err(|e| e.to_string())?,
+        "to-dec" => CastWrapper::to_dec(&command.args[0], command.args.get(1).map(|s| s.as_str()))
+            .map_err(|e| e.to_string())?,
+        "to-base" => CastWrapper::to_base(
+            &command.args[0],
+            command.args.get(1).map(|s| s.as_str()),
+            &command.args[2],
+        )
+        .map_err(|e| e.to_string())?,
+        "to-bytes32" => CastWrapper::to_bytes32(&command.args[0]).map_err(|e| e.to_string())?,
+        "format-bytes32-string" => {
+            CastWrapper::format_bytes32_string(&command.args[0]).map_err(|e| e.to_string())?
+        }
+        "parse-bytes32-string" => {
+            CastWrapper::parse_bytes32_string(&command.args[0]).map_err(|e| e.to_string())?
+        }
+        "parse-bytes32-address" => {
+            CastWrapper::parse_bytes32_address(&command.args[0]).map_err(|e| e.to_string())?
+        }
+
+        // ABI encoding & decoding
+        "abi-decode" => CastWrapper::abi_decode(
+            &command.args[0],
+            &command.args[1],
+            command.args.get(2).map_or(false, |s| s == "true"),
+        )
+        .map_err(|e| e.to_string())?,
+        "abi-encode" => CastWrapper::abi_encode(
+            &command.args[0],
+            command.args.get(1).map_or(false, |s| s == "true"),
+            &command.args[2..],
+        )
+        .map_err(|e| e.to_string())?,
+        "calldata-decode" => CastWrapper::calldata_decode(&command.args[0], &command.args[1])
+            .map_err(|e| e.to_string())?,
+        "calldata-encode" => CastWrapper::calldata_encode(&command.args[0], &command.args[1..])
+            .map_err(|e| e.to_string())?,
+
+        // Misc
+        "keccak" => CastWrapper::keccak(&command.args[0]).map_err(|e| e.to_string())?,
+        "hash-message" => CastWrapper::hash_message(&command.args[0]),
+        "sig-event" => CastWrapper::sig_event(&command.args[0]).map_err(|e| e.to_string())?,
+        "left-shift" => CastWrapper::left_shift(
+            &command.args[0],
+            &command.args[1],
+            command.args.get(2).map(|s| s.as_str()),
+            &command.args[3],
+        )
+        .map_err(|e| e.to_string())?,
+        "right-shift" => CastWrapper::right_shift(
+            &command.args[0],
+            &command.args[1],
+            command.args.get(2).map(|s| s.as_str()),
+            &command.args[3],
+        )
+        .map_err(|e| e.to_string())?,
+        "disassemble" => CastWrapper::disassemble(&command.args[0]).map_err(|e| e.to_string())?,
+        "index" => CastWrapper::index(&command.args[0], &command.args[1], &command.args[2])
+            .map_err(|e| e.to_string())?,
+        "index-erc7201" => {
+            CastWrapper::index_erc7201(&command.args[0]).map_err(|e| e.to_string())?
+        }
+        "decode-transaction" => {
+            CastWrapper::decode_transaction(&command.args[0]).map_err(|e| e.to_string())?
+        }
+        "decode-eof" => CastWrapper::decode_eof(&command.args[0]).map_err(|e| e.to_string())?,
+
+        _ => return Err(format!("Unknown command: {}", command.cmd)),
+    };
+
+    Ok(CommandResult { output: result })
+}
+
 fn main() {
     Builder::new()
         .filter_level(LevelFilter::Debug)
@@ -281,6 +407,7 @@ fn main() {
             get_available_datasets,
             subscribe_to_indexer_logs,
             execute_query_command,
+            run_cast_command,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

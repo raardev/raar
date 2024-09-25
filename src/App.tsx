@@ -17,6 +17,7 @@ import {
   ActivityIcon,
   BarChartIcon,
   CalculatorIcon,
+  Disc3Icon,
   FileTextIcon,
   GaugeIcon,
   GitBranchIcon,
@@ -34,6 +35,7 @@ import { Toaster } from 'sonner'
 import { mainnet } from 'viem/chains'
 import { WagmiProvider, createConfig } from 'wagmi'
 import './App.css'
+import CastTool from './components/CastTool'
 import ChainAnalyzer from './components/ChainAnalyzer'
 import ChainExtractor from './components/ChainExtractor'
 import HexConverter from './components/HexConverter'
@@ -83,6 +85,12 @@ const sidebarItems = [
     label: 'Chain List',
     icon: ListIcon,
     component: ChainList,
+  },
+  {
+    id: 'castTool',
+    label: 'Cast',
+    icon: Disc3Icon,
+    component: CastTool,
   },
   {
     id: 'devnetTool',
