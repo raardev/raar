@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.4.2] - 2024-09-26
+
+### Fixed
+
+- Fixed CodeMirror style not being applied
+
 ## [0.4.1] - 2024-09-26
 
 ### Fixed
@@ -68,3 +74,5 @@
 [0.2.0]: https://github.com/raardev/raar/releases/tag/0.2.0
 [0.3.0]: https://github.com/raardev/raar/releases/tag/0.3.0
 [0.4.0]: https://github.com/raardev/raar/releases/tag/0.4.0
+[0.4.1]: https://github.com/raardev/raar/releases/tag/0.4.1
+[0.4.2]: https://github.com/raardev/raar/releases/tag/0.4.2

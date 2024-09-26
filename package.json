@@ -1,7 +1,7 @@
 {
   "name": "raar",
   "private": true,
-  "version": "0.4.1",
+  "version": "0.4.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -35,7 +35,7 @@
     "@tanstack/react-virtual": "^3.10.4",
     "@tauri-apps/api": "^1",
     "@types/react-window": "^1.8.8",
-    "@uiw/react-codemirror": "^4.23.0",
+    "@uiw/react-codemirror": "^4.23.3",
     "@xyflow/react": "^12.1.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",

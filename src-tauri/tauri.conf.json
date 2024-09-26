@@ -7,7 +7,7 @@
   },
   "package": {
     "productName": "RaaR",
-    "version": "0.1.0"
+    "version": "0.4.2"
   },
   "tauri": {
     "allowlist": {
@@ -56,7 +56,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' http: https:;"
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' http: https:;"
     },
     "bundle": {
       "active": true,
