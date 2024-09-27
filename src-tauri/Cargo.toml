@@ -37,6 +37,7 @@ eyre = "0.6.12"
 alloy-rpc-types = "0.3.6"
 alloy-primitives = "0.8.3"
 alloy-provider = "0.3.6"
+polars = { version = "0.35.4", features = ["json", "lazy", "timezones"] }
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!

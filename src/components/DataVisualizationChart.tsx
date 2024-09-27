@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { extent } from 'd3-array'
 import { BrushIcon } from 'lucide-react'
 import {
   Area,
@@ -70,6 +71,9 @@ const DataVisualizationChart: React.FC<DataVisualizationChartProps> = ({
 
   const DataComponent =
     chartType === 'bar' ? Bar : chartType === 'line' ? Line : Area
+
+  // calculate y domain
+  const yDomain = extent(data, (d) => Number(d[yAxis])) as [number, number]
 
   return (
     <div className="flex flex-col space-y-4 h-full">
@@ -152,6 +156,9 @@ const DataVisualizationChart: React.FC<DataVisualizationChartProps> = ({
             tickLine={false}
             tickMargin={10}
             axisLine={false}
+            domain={yDomain}
+            scale="linear"
+            allowDataOverflow={false}
           />
           <ChartTooltip content={<ChartTooltipContent />} />
           <ChartLegend content={<ChartLegendContent />} />

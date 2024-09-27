@@ -2398,6 +2398,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "chrono-tz"
+version = "0.8.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d59ae0466b83e838b81a54256c39d5d7c20b9d7daa10510a242d9b75abd5936e"
+dependencies = [
+ "chrono",
+ "chrono-tz-build",
+ "phf 0.11.2",
+]
+
+[[package]]
+name = "chrono-tz-build"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "433e39f13c9a060046954e0592a8d0a4bcb1040125cbf91cb8ee58964cfb350f"
+dependencies = [
+ "parse-zoneinfo",
+ "phf 0.11.2",
+ "phf_codegen 0.11.2",
+]
+
+[[package]]
 name = "cipher"
 version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7237,6 +7259,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "parse-zoneinfo"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f2a05b18d44e2957b88f96ba460715e295bc1d7510468a2f3d3b44535d26c24"
+dependencies = [
+ "regex",
+]
+
+[[package]]
 name = "password-hash"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7423,6 +7454,16 @@ checksum = "4fb1c3a8bc4dd4e5cfce29b44ffc14bedd2ee294559a294e2a4d4c9e9a6a13cd"
 dependencies = [
  "phf_generator 0.10.0",
  "phf_shared 0.10.0",
+]
+
+[[package]]
+name = "phf_codegen"
+version = "0.11.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e8d39688d359e6b34654d328e262234662d16cc0f60ec8dcbe5e718709342a5a"
+dependencies = [
+ "phf_generator 0.11.2",
+ "phf_shared 0.11.2",
 ]
 
 [[package]]
@@ -7636,6 +7677,7 @@ dependencies = [
  "atoi_simd",
  "bytemuck",
  "chrono",
+ "chrono-tz",
  "dyn-clone",
  "either",
  "ethnum",
@@ -7713,6 +7755,7 @@ dependencies = [
  "bitflags 2.6.0",
  "bytemuck",
  "chrono",
+ "chrono-tz",
  "comfy-table",
  "either",
  "hashbrown 0.14.5",
@@ -7799,6 +7842,7 @@ dependencies = [
  "atoi_simd",
  "bytes",
  "chrono",
+ "chrono-tz",
  "fast-float",
  "home",
  "itoa 1.0.11",
@@ -7810,11 +7854,14 @@ dependencies = [
  "polars-arrow 0.35.4",
  "polars-core 0.35.4",
  "polars-error 0.35.4",
+ "polars-json 0.35.4",
  "polars-time 0.35.4",
  "polars-utils 0.35.4",
  "rayon",
  "regex",
  "ryu",
+ "serde_json",
+ "simd-json",
  "simdutf8",
  "smartstring",
 ]
@@ -7842,7 +7889,7 @@ dependencies = [
  "polars-arrow 0.36.2",
  "polars-core 0.36.2",
  "polars-error 0.36.2",
- "polars-json",
+ "polars-json 0.36.2",
  "polars-parquet",
  "polars-time 0.36.2",
  "polars-utils 0.36.2",
@@ -7855,6 +7902,27 @@ dependencies = [
  "smartstring",
  "tokio",
  "tokio-util",
+]
+
+[[package]]
+name = "polars-json"
+version = "0.35.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "93b9cb83c19daf334c398e56a9361bd79c8ad0718296db2afab08d476bd84559"
+dependencies = [
+ "ahash 0.8.11",
+ "chrono",
+ "fallible-streaming-iterator",
+ "hashbrown 0.14.5",
+ "indexmap 2.4.0",
+ "itoa 1.0.11",
+ "num-traits",
+ "polars-arrow 0.35.4",
+ "polars-error 0.35.4",
+ "polars-utils 0.35.4",
+ "ryu",
+ "simd-json",
+ "streaming-iterator",
 ]
 
 [[package]]
@@ -7891,6 +7959,7 @@ dependencies = [
  "polars-arrow 0.35.4",
  "polars-core 0.35.4",
  "polars-io 0.35.4",
+ "polars-json 0.35.4",
  "polars-ops 0.35.4",
  "polars-pipe 0.35.4",
  "polars-plan 0.35.4",
@@ -7914,7 +7983,7 @@ dependencies = [
  "polars-arrow 0.36.2",
  "polars-core 0.36.2",
  "polars-io 0.36.2",
- "polars-json",
+ "polars-json 0.36.2",
  "polars-ops 0.36.2",
  "polars-pipe 0.36.2",
  "polars-plan 0.36.2",
@@ -7934,6 +8003,8 @@ dependencies = [
  "ahash 0.8.11",
  "argminmax",
  "bytemuck",
+ "chrono",
+ "chrono-tz",
  "either",
  "hashbrown 0.14.5",
  "indexmap 2.4.0",
@@ -8057,6 +8128,7 @@ checksum = "10e32a0958ef854b132bad7f8369cb3237254635d5e864c99505bc0bc1035fbc"
 dependencies = [
  "ahash 0.8.11",
  "bytemuck",
+ "chrono-tz",
  "once_cell",
  "percent-encoding",
  "polars-arrow 0.35.4",
@@ -8085,7 +8157,7 @@ dependencies = [
  "polars-arrow 0.36.2",
  "polars-core 0.36.2",
  "polars-io 0.36.2",
- "polars-json",
+ "polars-json 0.36.2",
  "polars-ops 0.36.2",
  "polars-parquet",
  "polars-time 0.36.2",
@@ -8161,6 +8233,7 @@ checksum = "aae56f79e9cedd617773c1c8f5ca84a31a8b1d593714959d5f799e7bdd98fe51"
 dependencies = [
  "atoi",
  "chrono",
+ "chrono-tz",
  "now",
  "once_cell",
  "polars-arrow 0.35.4",
@@ -8575,6 +8648,7 @@ dependencies = [
  "foundry-cast",
  "foundry-common",
  "log",
+ "polars 0.35.4",
  "serde",
  "serde_json",
  "tauri",
