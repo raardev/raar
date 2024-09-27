@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.3] - 2024-09-27
+
+### Fixed
+
+- Fixed duckdb timezone query panic
+- Fixed data visualization chart scale and overflow
+
 ## [0.4.2] - 2024-09-26
 
 ### Fixed
@@ -76,3 +83,4 @@
 [0.4.0]: https://github.com/raardev/raar/releases/tag/0.4.0
 [0.4.1]: https://github.com/raardev/raar/releases/tag/0.4.1
 [0.4.2]: https://github.com/raardev/raar/releases/tag/0.4.2
+[0.4.3]: https://github.com/raardev/raar/releases/tag/0.4.3
