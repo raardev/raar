@@ -194,6 +194,29 @@ export const commonMethods: RPCMethod[] = [
   { method: 'anvil_dumpState', params: [] },
   { method: 'anvil_loadState', params: ['0x...'] }, // Replace with actual state hex string
   { method: 'anvil_nodeInfo', params: [] },
+
+  // ots namespace methods
+  { method: 'ots_getBlockRange', params: ['0x1', '0x10'] },
+  {
+    method: 'ots_getTransactionsByAddress',
+    params: ['0x742d35Cc6634C0532925a3b844Bc454e4438f44e', '0x1', '0x10'],
+  },
+  {
+    method: 'ots_traceTransaction',
+    params: [
+      '0xc31d7e7e85cab1d38ce1b8ac17e821ccd47dbde00f9d57f2bd8613bff9428396',
+    ],
+  },
+  { method: 'ots_traceBlock', params: ['0x1b4'] },
+  {
+    method: 'ots_getStorageAt',
+    params: ['0x742d35Cc6634C0532925a3b844Bc454e4438f44e', '0x0', 'latest'],
+  },
+  { method: 'ots_getBlockDetails', params: ['0x1b4'] },
+  {
+    method: 'ots_getContractCreation',
+    params: ['0x742d35Cc6634C0532925a3b844Bc454e4438f44e'],
+  },
 ]
 
 export const defaultParams: Record<string, string> = Object.fromEntries(

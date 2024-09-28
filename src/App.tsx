@@ -26,6 +26,7 @@ import {
   KeyIcon,
   ListIcon,
   PickaxeIcon,
+  SearchIcon,
   TestTube2Icon,
   WalletIcon,
   ZapIcon,
@@ -42,6 +43,7 @@ import HexConverter from './components/HexConverter'
 import KeyConverter from './components/KeyConverter'
 import RPCTool from './components/RPCTool'
 import TransactionPool from './components/TransactionPool'
+import BlockExplorer from './components/block-explorer/BlockExplorer'
 
 const config = createConfig(
   getDefaultConfig({
@@ -145,6 +147,12 @@ const sidebarItems = [
     label: 'Key Converter',
     icon: KeyIcon,
     component: KeyConverter,
+  },
+  {
+    id: 'blockExplorer',
+    label: 'Block Explorer',
+    icon: SearchIcon,
+    component: BlockExplorer,
   },
 ]
 
