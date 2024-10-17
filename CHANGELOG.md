@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.5.1] - 2024-10-17
+
+### Fixed
+
+- Fixed chain list that uses the wrong virtualized table
+
 ## [0.5.0] - 2024-10-14
 
 ### Added

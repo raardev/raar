@@ -1,4 +1,4 @@
-import { VirtualizedDataTable } from '@/components/VirtualizedDataTable'
+import { VirtualizedChainList } from '@/components/VirtualizedChainList'
 import { VirtualizedList } from '@/components/VirtualizedList'
 import { Input } from '@/components/ui/input'
 import { type Chain, chains } from '@/config/chains'
@@ -379,7 +379,7 @@ const ChainList: React.FC = () => {
         onChange={(e) => setSearchTerm(e.target.value)}
       />
       <div className="flex-grow overflow-hidden">
-        <VirtualizedDataTable columns={columns} data={filteredChains} />
+        <VirtualizedChainList columns={columns} data={filteredChains} />
       </div>
       <Toaster />
     </div>
