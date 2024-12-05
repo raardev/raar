@@ -6,10 +6,16 @@ import ErrorBoundary from '@/components/ErrorBoundary'
 import EthereumUnitConverter from '@/components/EthereumUnitConverter'
 import FourBytes from '@/components/FourBytes'
 import MultiChainGasTracker from '@/components/MultiChainGasTracker'
-import Sidebar from '@/components/Sidebar'
-import ToolWrapper from '@/components/ToolWrapper'
+import { AppSidebar, SidebarProvider } from '@/components/Sidebar'
 import TransactionTracer from '@/components/TransactionTracer'
 import WalletGenerator from '@/components/WalletGenerator'
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbList,
+  BreadcrumbPage,
+} from '@/components/ui/breadcrumb'
+import { Separator } from '@/components/ui/separator'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ConnectKitProvider, getDefaultConfig } from 'connectkit'
@@ -34,6 +40,7 @@ import { useEffect, useState } from 'react'
 import { Toaster } from 'sonner'
 import { mainnet } from 'viem/chains'
 import { WagmiProvider, createConfig } from 'wagmi'
+import { SidebarInset, SidebarTrigger } from './components/ui/sidebar'
 import './App.css'
 import CastTool from './components/CastTool'
 import ChainAnalyzer from './components/ChainAnalyzer'
@@ -55,96 +62,121 @@ const config = createConfig(
 )
 
 const sidebarItems = [
-  { id: 'rpcClient', label: 'RPC Client', icon: ZapIcon, component: RPCTool },
   {
-    id: 'transactionTracer',
-    label: 'Transaction Tracer',
-    icon: GitCommitIcon,
-    component: TransactionTracer,
+    label: 'Core Tools',
+    items: [
+      {
+        id: 'rpcClient',
+        label: 'RPC Client',
+        icon: ZapIcon,
+        component: RPCTool,
+      },
+      { id: 'castTool', label: 'Cast', icon: Disc3Icon, component: CastTool },
+      {
+        id: 'devnetTool',
+        label: 'Devnet',
+        icon: TestTube2Icon,
+        component: DevnetTool,
+      },
+    ],
   },
   {
-    id: 'transactionPool',
-    label: 'Transaction Pool',
-    icon: ActivityIcon,
-    component: TransactionPool,
+    label: 'Transaction Tools',
+    items: [
+      {
+        id: 'transactionTracer',
+        label: 'Transaction Tracer',
+        icon: GitCommitIcon,
+        component: TransactionTracer,
+      },
+      {
+        id: 'transactionPool',
+        label: 'Transaction Pool',
+        icon: ActivityIcon,
+        component: TransactionPool,
+      },
+      {
+        id: 'multiChainGasTracker',
+        label: 'Gas Tracker',
+        icon: GaugeIcon,
+        component: MultiChainGasTracker,
+      },
+    ],
   },
   {
-    id: 'chainExtractor',
-    label: 'Chain Extractor',
-    icon: PickaxeIcon,
-    component: ChainExtractor,
+    label: 'Chain Tools',
+    items: [
+      {
+        id: 'chainExtractor',
+        label: 'Chain Extractor',
+        icon: PickaxeIcon,
+        component: ChainExtractor,
+      },
+      {
+        id: 'chainAnalyzer',
+        label: 'Chain Analyzer',
+        icon: BarChartIcon,
+        component: ChainAnalyzer,
+      },
+      {
+        id: 'chainList',
+        label: 'Chain List',
+        icon: ListIcon,
+        component: ChainList,
+      },
+    ],
   },
   {
-    id: 'chainAnalyzer',
-    label: 'Chain Analyzer',
-    icon: BarChartIcon,
-    component: ChainAnalyzer,
+    label: 'Contract Tools',
+    items: [
+      {
+        id: 'contractInteraction',
+        label: 'Contract Interaction',
+        icon: FileTextIcon,
+        component: ContractInteraction,
+      },
+      {
+        id: 'contractMap',
+        label: 'Contract Map',
+        icon: GitBranchIcon,
+        component: ContractMap,
+      },
+      {
+        id: 'fourBytes',
+        label: '4bytes Decoder',
+        icon: HashIcon,
+        component: FourBytes,
+      },
+    ],
   },
   {
-    id: 'chainList',
-    label: 'Chain List',
-    icon: ListIcon,
-    component: ChainList,
-  },
-  {
-    id: 'castTool',
-    label: 'Cast',
-    icon: Disc3Icon,
-    component: CastTool,
-  },
-  {
-    id: 'devnetTool',
-    label: 'Devnet',
-    icon: TestTube2Icon,
-    component: DevnetTool,
-  },
-  {
-    id: 'walletGenerator',
-    label: 'Wallet Generator',
-    icon: WalletIcon,
-    component: WalletGenerator,
-  },
-  {
-    id: 'ethUnitConverter',
-    label: 'Unit Converter',
-    icon: CalculatorIcon,
-    component: EthereumUnitConverter,
-  },
-  {
-    id: 'contractInteraction',
-    label: 'Contract Interaction',
-    icon: FileTextIcon,
-    component: ContractInteraction,
-  },
-  {
-    id: 'fourBytes',
-    label: '4bytes Decoder',
-    icon: HashIcon,
-    component: FourBytes,
-  },
-  {
-    id: 'multiChainGasTracker',
-    label: 'Gas Tracker',
-    icon: GaugeIcon,
-    component: MultiChainGasTracker,
-  },
-  {
-    id: 'contractMap',
-    label: 'Contract Map(Experimental)',
-    icon: GitBranchIcon,
-    component: ContractMap,
-  },
-  {
-    id: 'hexConverter',
-    label: 'Hex Converter',
-    icon: HashIcon,
-    component: HexConverter,
-  },
-  {
-    id: 'keyConverter',
-    label: 'Key Converter',
-    icon: KeyIcon,
-    component: KeyConverter,
+    label: 'Utilities',
+    items: [
+      {
+        id: 'walletGenerator',
+        label: 'Wallet Generator',
+        icon: WalletIcon,
+        component: WalletGenerator,
+      },
+      {
+        id: 'ethUnitConverter',
+        label: 'Unit Converter',
+        icon: CalculatorIcon,
+        component: EthereumUnitConverter,
+      },
+      {
+        id: 'hexConverter',
+        label: 'Hex Converter',
+        icon: HashIcon,
+        component: HexConverter,
+      },
+      {
+        id: 'keyConverter',
+        label: 'Key Converter',
+        icon: KeyIcon,
+        component: KeyConverter,
+      },
+    ],
   },
 ]
 
@@ -159,43 +191,53 @@ function App() {
     localStorage.setItem('activeTab', activeTab)
   }, [activeTab])
 
-  const ActiveComponent = sidebarItems.find(
-    (item) => item.id === activeTab,
-  )?.component
+  const ActiveComponent = sidebarItems
+    .flatMap((category) => category.items)
+    .find((item) => item.id === activeTab)?.component
+
+  const activeLabel = sidebarItems
+    .flatMap((category) => category.items)
+    .find((item) => item.id === activeTab)?.label
 
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <ConnectKitProvider>
           <TooltipProvider>
-            <div className="flex h-screen bg-muted">
-              <Sidebar
+            <SidebarProvider>
+              <AppSidebar
                 items={sidebarItems}
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
               />
-
-              <div className="flex-1 p-4 overflow-auto bg-background rounded-t-2xl mx-3 mt-3">
-                {ActiveComponent && (
-                  <ErrorBoundary>
-                    <ToolWrapper
-                      title={
-                        sidebarItems.find((item) => item.id === activeTab)
-                          ?.label || ''
-                      }
-                    >
+              <SidebarInset>
+                <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-background">
+                  <div className="flex items-center gap-2">
+                    <SidebarTrigger />
+                    <Separator orientation="vertical" className="mr-2 h-4" />
+                    <Breadcrumb>
+                      <BreadcrumbList>
+                        <BreadcrumbItem>
+                          <BreadcrumbPage>{activeLabel}</BreadcrumbPage>
+                        </BreadcrumbItem>
+                      </BreadcrumbList>
+                    </Breadcrumb>
+                  </div>
+                </header>
+                <main className="flex-1 overflow-auto p-4">
+                  {ActiveComponent && (
+                    <ErrorBoundary>
                       <ActiveComponent />
-                    </ToolWrapper>
-                  </ErrorBoundary>
-                )}
-              </div>
-              <Toaster richColors />
-            </div>
+                    </ErrorBoundary>
+                  )}
+                  <Toaster richColors />
+                </main>
+              </SidebarInset>
+            </SidebarProvider>
           </TooltipProvider>
         </ConnectKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
   )
 }
-
 export default App

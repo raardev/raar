@@ -27,10 +27,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import type { Chain } from 'viem'
 import {
+  http,
   createPublicClient,
   createWalletClient,
   formatGwei,
-  http,
   parseEther,
 } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'

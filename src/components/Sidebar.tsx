@@ -1,98 +1,72 @@
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
-import { PanelLeftIcon } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from '@/components/ui/sidebar'
+import type { LucideIcon } from 'lucide-react'
 
 interface SidebarItem {
   id: string
   label: string
-  icon: React.ElementType
+  icon: LucideIcon
+  component: React.ComponentType
 }
 
-interface SidebarProps {
+interface SidebarCategory {
+  label: string
   items: SidebarItem[]
+}
+
+interface AppSidebarProps {
+  items: SidebarCategory[]
   activeTab: string
   setActiveTab: (id: string) => void
 }
 
-const Sidebar: React.FC<SidebarProps> = ({
+export function AppSidebar({
   items,
   activeTab,
   setActiveTab,
-}) => {
-  const [isCollapsed, setIsCollapsed] = useState(false)
-
-  useEffect(() => {
-    const handleResize = () => {
-      const macWindowHalfWidth = 840
-      setIsCollapsed(window.innerWidth < macWindowHalfWidth)
-    }
-
-    window.addEventListener('resize', handleResize)
-    handleResize() // Initial check
-
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
-
-  const handleLogoDoubleClick = () => {
-    setIsCollapsed(!isCollapsed)
-  }
-
+}: AppSidebarProps) {
   return (
-    <div
-      className={cn(
-        'bg-muted text-card-foreground p-4 transition-all duration-300',
-        isCollapsed ? 'w-16' : 'w-64',
-      )}
-    >
-      <div className="flex items-center mb-6">
-        {isCollapsed ? (
-          <Button
-            variant="ghost"
-            className="w-full p-0"
-            onClick={() => setIsCollapsed(false)}
-          >
-            <PanelLeftIcon size={24} />
-          </Button>
-        ) : (
-          <div
-            onDoubleClick={handleLogoDoubleClick}
-            className="flex items-center cursor-pointer"
-          >
-            <img
-              src="/logo.svg"
-              alt="RaaR"
-              width={32}
-              height={32}
-              className="mr-2"
-            />
-            <h1 className="text-2xl font-bold">RaaR</h1>
-          </div>
-        )}
-      </div>
+    <Sidebar>
+      <SidebarHeader>
+        <div className="flex items-center space-x-2 px-3 py-2">
+          <img src="/logo.svg" alt="RaaR" width={32} height={32} />
+          <span className="text-xl font-bold">RaaR</span>
+        </div>
+      </SidebarHeader>
 
-      <div className="space-y-2">
-        {items.map((item) => (
-          <Button
-            key={item.id}
-            variant={'ghost'}
-            className={cn(
-              'w-full justify-start px-2',
-              isCollapsed ? 'p-2' : 'text-left',
-              activeTab === item.id && 'bg-accent',
-            )}
-            onClick={() => setActiveTab(item.id)}
-          >
-            <item.icon
-              size={isCollapsed ? 24 : 16}
-              className={isCollapsed ? '' : 'mr-2'}
-            />
-            {!isCollapsed && <span>{item.label}</span>}
-          </Button>
+      <SidebarContent className="pb-4">
+        {items.map((category) => (
+          <SidebarGroup key={category.label}>
+            <SidebarGroupLabel>{category.label}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {category.items.map((item) => (
+                  <SidebarMenuItem key={item.id}>
+                    <SidebarMenuButton
+                      isActive={activeTab === item.id}
+                      onClick={() => setActiveTab(item.id)}
+                    >
+                      <item.icon className="mr-2 h-4 w-4" />
+                      <span>{item.label}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
         ))}
-      </div>
-    </div>
+      </SidebarContent>
+    </Sidebar>
   )
 }
 
-export default Sidebar
+export { SidebarProvider } from '@/components/ui/sidebar'
