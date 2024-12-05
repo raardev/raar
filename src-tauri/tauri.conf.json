@@ -7,7 +7,7 @@
   },
   "package": {
     "productName": "RaaR",
-    "version": "0.4.3"
+    "version": "0.5.2"
   },
   "tauri": {
     "allowlist": {
@@ -31,10 +31,7 @@
         "removeDir": true,
         "removeFile": true,
         "renameFile": true,
-        "scope": [
-          "$DOCUMENT/*",
-          "$DOWNLOAD/*"
-        ]
+        "scope": ["$DOCUMENT/*", "$DOWNLOAD/*"]
       },
       "clipboard": {
         "writeText": true
@@ -42,10 +39,7 @@
       "http": {
         "all": true,
         "request": true,
-        "scope": [
-          "http://*",
-          "https://*"
-        ]
+        "scope": ["http://*", "https://*"]
       }
     },
     "windows": [

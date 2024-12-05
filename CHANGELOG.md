@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.5.2] - 2024-12-05
+
+### Added
+
+- Refactor sidebar using shadcn/ui
+
 ## [0.5.1] - 2024-10-17
 
 ### Fixed
