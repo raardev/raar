@@ -23,14 +23,19 @@ RUN echo "Port 2222" >> /etc/ssh/sshd_config \
     && echo "ClientAliveCountMax 2" >> /etc/ssh/sshd_config \
     && echo "MaxStartups 100:30:150" >> /etc/ssh/sshd_config \
     && echo "MaxSessions 5" >> /etc/ssh/sshd_config \
-    # Security settings
+    # Security settings - Allow anonymous access
     && echo "PermitEmptyPasswords yes" >> /etc/ssh/sshd_config \
-    && echo "PermitRootLogin prohibit-password" >> /etc/ssh/sshd_config \
+    && echo "PermitRootLogin yes" >> /etc/ssh/sshd_config \
+    && echo "AuthenticationMethods none" >> /etc/ssh/sshd_config \
+    && echo "PermitUserEnvironment yes" >> /etc/ssh/sshd_config \
+    && echo "AcceptEnv *" >> /etc/ssh/sshd_config \
+    # Disable all authentication methods
+    && echo "UsePAM no" >> /etc/ssh/sshd_config \
     && echo "PubkeyAuthentication no" >> /etc/ssh/sshd_config \
     && echo "PasswordAuthentication no" >> /etc/ssh/sshd_config \
     && echo "KbdInteractiveAuthentication no" >> /etc/ssh/sshd_config \
     && echo "ChallengeResponseAuthentication no" >> /etc/ssh/sshd_config \
-    && echo "AuthenticationMethods none" >> /etc/ssh/sshd_config \
+    && echo "GSSAPIAuthentication no" >> /etc/ssh/sshd_config \
     # Performance
     && echo "UseDNS no" >> /etc/ssh/sshd_config \
     && echo "TCPKeepAlive yes" >> /etc/ssh/sshd_config \
