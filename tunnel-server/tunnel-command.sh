@@ -20,25 +20,14 @@ mkdir -p "$LOCK_DIR"
 
 for PORT in $(seq 10000 10099); do
     if mkdir "$LOCK_DIR/$PORT" 2>/dev/null; then
-        # Create a cleanup function
-        cleanup() {
-            rm -rf "$LOCK_DIR/$PORT"
-            exit 0
-        }
-        trap cleanup EXIT INT TERM
+        trap 'rm -rf "$LOCK_DIR/$PORT"' EXIT
 
         echo "Forwarding HTTP traffic from https://$SUBDOMAIN.tunnel.raar.dev"
         echo "Press Ctrl+C to stop the tunnel"
 
-        # Remove exec to prevent immediate script exit
-        ssh -N -R "$PORT:localhost:$LOCAL_PORT" localhost &
-        SSH_PID=$!
-
-        # Wait for SSH process
-        wait $SSH_PID
-
-        # Clean up and exit if SSH process ends
-        cleanup
+        # Just wait forever - the SSH connection handles the forwarding
+        tail -f /dev/null
+        exit 0
     fi
 done
 

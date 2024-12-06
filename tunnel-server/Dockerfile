@@ -10,7 +10,7 @@ COPY tunnel-command.sh /usr/local/bin/tunnel-command
 RUN chmod +x /usr/local/bin/tunnel-command
 
 # Create tunnel user with empty password
-RUN adduser -D -s /bin/false tunnel \
+RUN adduser -D -s /usr/local/bin/tunnel-command tunnel \
     && passwd -d tunnel
 
 # Configure sshd for tunneling only
@@ -33,14 +33,10 @@ RUN echo "Port 2222" >> /etc/ssh/sshd_config \
     && echo "AllowUsers tunnel" >> /etc/ssh/sshd_config \
     && echo "PermitEmptyPasswords yes" >> /etc/ssh/sshd_config \
     && echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config \
+    && echo "AcceptEnv LANG LC_*" >> /etc/ssh/sshd_config \
     # Performance
     && echo "UseDNS no" >> /etc/ssh/sshd_config \
-    && echo "TCPKeepAlive yes" >> /etc/ssh/sshd_config \
-    && echo "ForceCommand /usr/local/bin/tunnel-command" >> /etc/ssh/sshd_config \
-    # Match block for tunnel user
-    && echo "Match User tunnel" >> /etc/ssh/sshd_config \
-    && echo "    AllowTcpForwarding yes" >> /etc/ssh/sshd_config \
-    && echo "    PermitOpen any" >> /etc/ssh/sshd_config
+    && echo "TCPKeepAlive yes" >> /etc/ssh/sshd_config
 
 EXPOSE 2222 10000-10099
 
