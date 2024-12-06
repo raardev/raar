@@ -44,10 +44,10 @@ The server will:
 Add these DNS records:
 ```bash
 # Main domain
-tunnel.raar.dev.         A     <your-server-ip>
+tunnel.raar.dev         A     <your-server-ip>
 
 # Wildcard for subdomains
-*.tunnel.raar.dev.       A     <your-server-ip>
+*.tunnel.raar.dev       A     <your-server-ip>
 ```
 
 ## Security
