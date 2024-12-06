@@ -17,6 +17,7 @@ RUN adduser -D -s /bin/false tunnel \
 RUN echo "Port 2222" >> /etc/ssh/sshd_config \
     && echo "GatewayPorts yes" >> /etc/ssh/sshd_config \
     && echo "AllowTcpForwarding yes" >> /etc/ssh/sshd_config \
+    && echo "PermitTunnel yes" >> /etc/ssh/sshd_config \
     && echo "PermitOpen any" >> /etc/ssh/sshd_config \
     # Disable everything except port forwarding
     && echo "X11Forwarding no" >> /etc/ssh/sshd_config \
@@ -35,7 +36,11 @@ RUN echo "Port 2222" >> /etc/ssh/sshd_config \
     # Performance
     && echo "UseDNS no" >> /etc/ssh/sshd_config \
     && echo "TCPKeepAlive yes" >> /etc/ssh/sshd_config \
-    && echo "ForceCommand /usr/local/bin/tunnel-command" >> /etc/ssh/sshd_config
+    && echo "ForceCommand /usr/local/bin/tunnel-command" >> /etc/ssh/sshd_config \
+    # Match block for tunnel user
+    && echo "Match User tunnel" >> /etc/ssh/sshd_config \
+    && echo "    AllowTcpForwarding yes" >> /etc/ssh/sshd_config \
+    && echo "    PermitOpen any" >> /etc/ssh/sshd_config
 
 EXPOSE 2222 10000-10099
 

@@ -1,7 +1,7 @@
 #!/bin/sh
 
-# Generate random subdomain (16 characters)
-SUBDOMAIN=$(head /dev/urandom | tr -dc a-z0-9 | head -c 16)
+# Generate random subdomain (32 characters)
+SUBDOMAIN=$(head /dev/urandom | tr -dc a-z0-9 | head -c 32)
 
 # Extract the original command to get the local port
 ORIGINAL_COMMAND="$SSH_ORIGINAL_COMMAND"
@@ -11,9 +11,19 @@ if [ -z "$LOCAL_PORT" ]; then
     LOCAL_PORT="8080"  # Default port if none specified
 fi
 
-# Find available port in range 10000-10099
+# Use a lock directory to avoid race conditions
+LOCK_DIR="/tmp/tunnel-locks"
+mkdir -p "$LOCK_DIR"
+
 for PORT in $(seq 10000 10099); do
-    if ! netstat -tln | grep -q ":$PORT "; then
+    if mkdir "$LOCK_DIR/$PORT" 2>/dev/null; then
+        # Create a cleanup function
+        cleanup() {
+            rm -rf "$LOCK_DIR/$PORT"
+            exit 0
+        }
+        trap cleanup EXIT INT TERM
+
         echo "Forwarding HTTP traffic from https://$SUBDOMAIN.tunnel.raar.dev"
         echo "Press Ctrl+C to stop the tunnel"
 
@@ -21,9 +31,9 @@ for PORT in $(seq 10000 10099); do
         # Use -N for no shell, -R for remote port forwarding
         exec ssh -N -R "$PORT:localhost:$LOCAL_PORT" localhost &
 
-        # Keep the connection alive
-        while true; do
-            sleep infinity
+        # Use a more reliable keep-alive mechanism
+        while kill -0 $! 2>/dev/null; do
+            sleep 5
         done
         exit 0
     fi
