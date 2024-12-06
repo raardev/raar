@@ -9,7 +9,7 @@ services:
     build: .
     ports:
       - "2222:2222"
-      - "10000-10099:10000-10099"  # 使用100个端口，支持100个并发连接
+      - "10000-10099:10000-10099"
     networks:
       - tunnel-net
     restart: always
