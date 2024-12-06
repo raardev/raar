@@ -7,8 +7,7 @@ RUN apk add --no-cache openssh openssl \
 
 # Add script to generate and display subdomain
 COPY tunnel-command.sh /usr/local/bin/tunnel-command
-RUN chmod +x /usr/local/bin/tunnel-command \
-    && echo 'ForceCommand /usr/local/bin/tunnel-command' >> /etc/ssh/sshd_config
+RUN chmod +x /usr/local/bin/tunnel-command
 
 # Configure sshd for tunneling only
 RUN echo "Port 2222" >> /etc/ssh/sshd_config \
@@ -24,12 +23,16 @@ RUN echo "Port 2222" >> /etc/ssh/sshd_config \
     && echo "ClientAliveCountMax 2" >> /etc/ssh/sshd_config \
     && echo "MaxStartups 100:30:150" >> /etc/ssh/sshd_config \
     && echo "MaxSessions 5" >> /etc/ssh/sshd_config \
-    # Authentication
+    # Allow no-password login
+    && echo "PermitEmptyPasswords yes" >> /etc/ssh/sshd_config \
+    && echo "PasswordAuthentication no" >> /etc/ssh/sshd_config \
+    && echo "PermitRootLogin no" >> /etc/ssh/sshd_config \
     && echo "AuthenticationMethods none" >> /etc/ssh/sshd_config \
     # Performance
     && echo "UseDNS no" >> /etc/ssh/sshd_config \
-    && echo "TCPKeepAlive yes" >> /etc/ssh/sshd_config
+    && echo "TCPKeepAlive yes" >> /etc/ssh/sshd_config \
+    && echo "ForceCommand /usr/local/bin/tunnel-command" >> /etc/ssh/sshd_config
 
-EXPOSE 2222 10000-65535
+EXPOSE 2222 10000-10099
 
 CMD ["/usr/sbin/sshd", "-D", "-e"]
