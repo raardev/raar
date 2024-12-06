@@ -17,6 +17,12 @@ services:
       - no-new-privileges:true
     labels:
       - "traefik.enable=true"
+      - "traefik.http.routers.tunnel-http.rule=HostRegexp(`{subdomain:[a-z0-9]+}.tunnel.raar.dev`)"
+      - "traefik.http.routers.tunnel-http.entrypoints=web"
+      - "traefik.http.routers.tunnel-http.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
       - "traefik.http.routers.tunnel.rule=HostRegexp(`{subdomain:[a-z0-9]+}.tunnel.raar.dev`)"
-      - "traefik.http.routers.tunnel.entrypoints=web"
+      - "traefik.http.routers.tunnel.entrypoints=websecure"
+      - "traefik.http.routers.tunnel.tls=true"
+      - "traefik.http.routers.tunnel.tls.certresolver=letsencrypt"
       - "traefik.http.services.tunnel.loadbalancer.server.port=10000-10099"
