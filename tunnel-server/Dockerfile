@@ -1,7 +1,7 @@
 FROM alpine:latest
 
 # Install OpenSSH and required tools
-RUN apk add --no-cache openssh openssl linux-pam \
+RUN apk add --no-cache openssh openssl \
     && ssh-keygen -A \
     && mkdir -p /run/sshd
 
@@ -9,8 +9,9 @@ RUN apk add --no-cache openssh openssl linux-pam \
 COPY tunnel-command.sh /usr/local/bin/tunnel-command
 RUN chmod +x /usr/local/bin/tunnel-command
 
-# Add PAM configuration
-COPY sshd /etc/pam.d/sshd
+# Create tunnel user with empty password
+RUN adduser -D -s /bin/false tunnel \
+    && passwd -d tunnel
 
 # Configure sshd for tunneling only
 RUN echo "Port 2222" >> /etc/ssh/sshd_config \
@@ -28,19 +29,13 @@ RUN echo "Port 2222" >> /etc/ssh/sshd_config \
     && echo "MaxSessions 5" >> /etc/ssh/sshd_config \
     # Security settings
     && echo "PermitRootLogin no" >> /etc/ssh/sshd_config \
-    && echo "PubkeyAuthentication no" >> /etc/ssh/sshd_config \
-    && echo "PasswordAuthentication no" >> /etc/ssh/sshd_config \
-    && echo "ChallengeResponseAuthentication yes" >> /etc/ssh/sshd_config \
-    && echo "KbdInteractiveAuthentication yes" >> /etc/ssh/sshd_config \
-    && echo "AuthenticationMethods keyboard-interactive" >> /etc/ssh/sshd_config \
-    && echo "UsePAM yes" >> /etc/ssh/sshd_config \
+    && echo "AllowUsers tunnel" >> /etc/ssh/sshd_config \
+    && echo "PermitEmptyPasswords yes" >> /etc/ssh/sshd_config \
+    && echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config \
     # Performance
     && echo "UseDNS no" >> /etc/ssh/sshd_config \
     && echo "TCPKeepAlive yes" >> /etc/ssh/sshd_config \
     && echo "ForceCommand /usr/local/bin/tunnel-command" >> /etc/ssh/sshd_config
-
-# Create a default authorized_keys file
-RUN mkdir -p /etc/ssh/authorized_keys
 
 EXPOSE 2222 10000-10099
 
