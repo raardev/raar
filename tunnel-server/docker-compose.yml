@@ -15,3 +15,9 @@ services:
     restart: always
     security_opt:
       - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tunnel.rule=HostRegexp(`{subdomain:[a-z0-9]+}.tunnel.raar.dev`)"
+      - "traefik.http.routers.tunnel.entrypoints=websecure"
+      - "traefik.http.routers.tunnel.tls=true"
+      - "traefik.http.services.tunnel.loadbalancer.server.port=10000-10099"
