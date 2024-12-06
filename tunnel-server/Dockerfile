@@ -24,8 +24,11 @@ RUN echo "Port 2222" >> /etc/ssh/sshd_config \
     && echo "MaxStartups 100:30:150" >> /etc/ssh/sshd_config \
     && echo "MaxSessions 5" >> /etc/ssh/sshd_config \
     # Security settings
-    && echo "PermitRootLogin no" >> /etc/ssh/sshd_config \
+    && echo "PermitEmptyPasswords yes" >> /etc/ssh/sshd_config \
+    && echo "PermitRootLogin prohibit-password" >> /etc/ssh/sshd_config \
+    && echo "PubkeyAuthentication no" >> /etc/ssh/sshd_config \
     && echo "PasswordAuthentication no" >> /etc/ssh/sshd_config \
+    && echo "KbdInteractiveAuthentication no" >> /etc/ssh/sshd_config \
     && echo "ChallengeResponseAuthentication no" >> /etc/ssh/sshd_config \
     && echo "AuthenticationMethods none" >> /etc/ssh/sshd_config \
     # Performance
