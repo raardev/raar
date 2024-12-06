@@ -1,9 +1,14 @@
 FROM alpine:latest
 
-# Install OpenSSH
-RUN apk add --no-cache openssh \
+# Install OpenSSH and required tools
+RUN apk add --no-cache openssh openssl \
     && ssh-keygen -A \
     && mkdir -p /run/sshd
+
+# Add script to generate and display subdomain
+COPY tunnel-command.sh /usr/local/bin/tunnel-command
+RUN chmod +x /usr/local/bin/tunnel-command \
+    && echo 'ForceCommand /usr/local/bin/tunnel-command' >> /etc/ssh/sshd_config
 
 # Configure sshd for tunneling only
 RUN echo "Port 2222" >> /etc/ssh/sshd_config \
