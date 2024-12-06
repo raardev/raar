@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Enable debug output
+set -x
+
 # Generate random subdomain (32 characters)
 SUBDOMAIN=$(head /dev/urandom | tr -dc a-z0-9 | head -c 32)
 
@@ -27,15 +30,15 @@ for PORT in $(seq 10000 10099); do
         echo "Forwarding HTTP traffic from https://$SUBDOMAIN.tunnel.raar.dev"
         echo "Press Ctrl+C to stop the tunnel"
 
-        # Execute the SSH tunnel command
-        # Use -N for no shell, -R for remote port forwarding
-        exec ssh -N -R "$PORT:localhost:$LOCAL_PORT" localhost &
+        # Remove exec to prevent immediate script exit
+        ssh -N -R "$PORT:localhost:$LOCAL_PORT" localhost &
+        SSH_PID=$!
 
-        # Use a more reliable keep-alive mechanism
-        while kill -0 $! 2>/dev/null; do
-            sleep 5
-        done
-        exit 0
+        # Wait for SSH process
+        wait $SSH_PID
+
+        # Clean up and exit if SSH process ends
+        cleanup
     fi
 done
 
