@@ -19,6 +19,7 @@ import {
 import { commonMethods, defaultParams } from '@/config/rpcToolDefaults'
 import { useRPCToolStore } from '@/stores/rpcToolStore'
 import { json } from '@codemirror/lang-json'
+import { EditorView } from '@codemirror/view'
 import { writeText } from '@tauri-apps/api/clipboard'
 import { save } from '@tauri-apps/api/dialog'
 import { writeTextFile } from '@tauri-apps/api/fs'
@@ -266,7 +267,7 @@ const RPCTool: React.FC = () => {
               <CodeMirror
                 value={req.params}
                 height="200px"
-                extensions={[json()]}
+                extensions={[json(), EditorView.lineWrapping]}
                 onChange={(value) => updateRequest(req.id, { params: value })}
                 className="border border-input rounded-md"
               />
@@ -377,10 +378,11 @@ const RPCTool: React.FC = () => {
                       null,
                       2,
                     )}
-                    height="400px"
-                    extensions={[json()]}
+                    maxHeight="600px"
+                    minHeight="200px"
+                    extensions={[json(), EditorView.lineWrapping]}
                     editable={false}
-                    className="border border-input rounded-md"
+                    className="border border-input rounded-md overflow-auto"
                   />
                   <div className="absolute top-2 right-2 flex space-x-2 text-muted-foreground">
                     <Tooltip>

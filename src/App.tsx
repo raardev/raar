@@ -6,6 +6,7 @@ import ErrorBoundary from '@/components/ErrorBoundary'
 import EthereumUnitConverter from '@/components/EthereumUnitConverter'
 import FourBytes from '@/components/FourBytes'
 import MultiChainGasTracker from '@/components/MultiChainGasTracker'
+import NFTDataParser from '@/components/NFTDataParser'
 import { AppSidebar, SidebarProvider } from '@/components/Sidebar'
 import TransactionTracer from '@/components/TransactionTracer'
 import WalletGenerator from '@/components/WalletGenerator'
@@ -25,6 +26,7 @@ import {
   CalculatorIcon,
   Disc3Icon,
   FileTextIcon,
+  GalleryVerticalEndIcon,
   GaugeIcon,
   GitBranchIcon,
   GitCommitIcon,
@@ -157,6 +159,12 @@ const sidebarItems = [
         label: 'Wallet Generator',
         icon: WalletIcon,
         component: WalletGenerator,
+      },
+      {
+        id: 'nftDataParser',
+        label: 'NFT Data Parser',
+        icon: GalleryVerticalEndIcon,
+        component: NFTDataParser,
       },
       {
         id: 'ethUnitConverter',
