@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.5.3] - 2024-12-27
+
+### Added
+
+- NFT Data Parser: Parse and display NFT metadata from IPFS, Arweave, Lens, and data URIs with image preview and history tracking
+
+### Fixed
+
+- Fixed RPC client response overflow issues
+- Enabled auto line wrapping in CodeMirror editors
+
 ## [0.5.2] - 2024-12-05
 
 ### Added
@@ -106,3 +117,6 @@
 [0.4.2]: https://github.com/raardev/raar/releases/tag/0.4.2
 [0.4.3]: https://github.com/raardev/raar/releases/tag/0.4.3
 [0.5.0]: https://github.com/raardev/raar/releases/tag/0.5.0
+[0.5.1]: https://github.com/raardev/raar/releases/tag/0.5.1
+[0.5.2]: https://github.com/raardev/raar/releases/tag/0.5.2
+[0.5.3]: https://github.com/raardev/raar/releases/tag/0.5.3
