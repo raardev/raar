@@ -1,18 +1,9 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Tooltip,
@@ -33,7 +24,6 @@ import {
   Loader2Icon,
   MusicIcon,
   PlayIcon,
-  RefreshCwIcon,
 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -492,7 +482,7 @@ const NFTDataParser: React.FC = () => {
                             <div className="text-sm bg-muted p-3 rounded whitespace-pre-wrap break-words w-full min-w-0 overflow-auto">
                               {String(value)}
                             </div>
-                          )
+                          )}
                         </div>
                       </CardContent>
                     </Card>
